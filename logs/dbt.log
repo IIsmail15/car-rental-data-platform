@@ -1,0 +1,81 @@
+[0m15:01:30.971641 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000029B05E0B800>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000029B05E0BDA0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000029B05CB2E70>]}
+
+
+============================== 15:01:31.041439 | cffadf59-7bbe-4812-bd28-87e1210a03c9 ==============================
+[0m15:01:31.041439 [info ] [MainThread]: Running with dbt=1.11.8
+[0m15:01:31.041439 [debug] [MainThread]: running dbt with arguments {'static_parser': 'True', 'no_print': 'None', 'version_check': 'True', 'target_path': 'None', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'printer_width': '80', 'write_json': 'True', 'introspect': 'True', 'log_cache_events': 'False', 'empty': 'None', 'cache_selected_only': 'False', 'log_format': 'default', 'debug': 'False', 'fail_fast': 'False', 'profiles_dir': 'C:\\Users\\IIsra\\.dbt', 'send_anonymous_usage_stats': 'True', 'quiet': 'False', 'warn_error': 'None', 'partial_parse': 'True', 'invocation_command': 'dbt init car_rental_dbt', 'indirect_selection': 'eager', 'use_colors': 'True', 'use_experimental_parser': 'False', 'log_path': 'logs'}
+[0m15:01:31.604919 [debug] [MainThread]: Starter project path: C:\Users\IIsra\anaconda3\Lib\site-packages\dbt\include\starter_project
+[0m15:01:31.678956 [info ] [MainThread]: 
+Your new dbt project "car_rental_dbt" was created!
+
+For more information on how to configure the profiles.yml file,
+please consult the dbt documentation here:
+
+  https://docs.getdbt.com/docs/configure-your-profile
+
+One more thing:
+
+Need help? Don't hesitate to reach out to us via GitHub issues or on Slack:
+
+  https://community.getdbt.com/
+
+Happy modeling!
+
+[0m15:01:31.686156 [info ] [MainThread]: Setting up your profile.
+[0m15:05:24.303732 [error] [MainThread]: Encountered an error:
+
+[0m15:05:24.319367 [error] [MainThread]: Traceback (most recent call last):
+  File "C:\Users\IIsra\anaconda3\Lib\site-packages\dbt\cli\requires.py", line 182, in wrapper
+    result, success = func(*args, **kwargs)
+                      ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\IIsra\anaconda3\Lib\site-packages\dbt\cli\requires.py", line 128, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\IIsra\anaconda3\Lib\site-packages\dbt\cli\main.py", line 488, in init
+    results = task.run()
+              ^^^^^^^^^^
+  File "C:\Users\IIsra\anaconda3\Lib\site-packages\dbt\task\init.py", line 346, in run
+    self.setup_profile(profile_name)
+  File "C:\Users\IIsra\anaconda3\Lib\site-packages\dbt\task\init.py", line 262, in setup_profile
+    self.create_profile_from_target(adapter, profile_name=profile_name)
+  File "C:\Users\IIsra\anaconda3\Lib\site-packages\dbt\task\init.py", line 179, in create_profile_from_target
+    self.create_profile_from_profile_template(profile_template, profile_name)
+  File "C:\Users\IIsra\anaconda3\Lib\site-packages\dbt\task\init.py", line 163, in create_profile_from_profile_template
+    target = self.generate_target_from_input(prompts, initial_target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\IIsra\anaconda3\Lib\site-packages\dbt\task\init.py", line 129, in generate_target_from_input
+    target[key] = click.prompt(
+                  ^^^^^^^^^^^^^
+  File "C:\Users\IIsra\anaconda3\Lib\site-packages\click\termui.py", line 179, in prompt
+    value = prompt_func(prompt)
+            ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\IIsra\anaconda3\Lib\site-packages\click\termui.py", line 162, in prompt_func
+    raise Abort() from None
+click.exceptions.Abort
+
+[0m15:05:24.330078 [debug] [MainThread]: Command `dbt init` failed at 15:05:24.327527 after 234.13 seconds
+[0m15:05:24.331321 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000029B05E0B800>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000029B07576C30>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000029B075E9A30>]}
+[0m15:05:24.335366 [debug] [MainThread]: Flushing usage events
+[0m15:05:26.148288 [debug] [MainThread]: An error was encountered while trying to flush usage events
+[0m15:05:59.714751 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000015E7C0F47D0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000015E7C0F5100>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000015E7C0F4710>]}
+
+
+============================== 15:05:59.738446 | ae6a822e-0ef0-40ee-9ca3-cfca79366a0c ==============================
+[0m15:05:59.738446 [info ] [MainThread]: Running with dbt=1.11.8
+[0m15:05:59.740465 [debug] [MainThread]: running dbt with arguments {'static_parser': 'True', 'no_print': 'None', 'version_check': 'True', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'target_path': 'None', 'printer_width': '80', 'write_json': 'True', 'empty': 'None', 'log_cache_events': 'False', 'introspect': 'True', 'cache_selected_only': 'False', 'fail_fast': 'False', 'debug': 'False', 'log_format': 'default', 'partial_parse': 'True', 'send_anonymous_usage_stats': 'True', 'quiet': 'False', 'warn_error': 'None', 'profiles_dir': 'C:\\Users\\IIsra\\.dbt', 'invocation_command': 'dbt init car_rental-dbt', 'use_colors': 'True', 'indirect_selection': 'eager', 'use_experimental_parser': 'False', 'log_path': 'logs'}
+[0m15:06:22.704862 [info ] [MainThread]: A project called car_rental_dbt already exists here.
+[0m15:06:22.710931 [debug] [MainThread]: Command `dbt init` succeeded at 15:06:22.710931 after 23.70 seconds
+[0m15:06:22.714914 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000015E7A5F11C0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000015E79E5DC40>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000015E79E5E000>]}
+[0m15:06:22.714914 [debug] [MainThread]: Flushing usage events
+[0m15:06:24.322126 [debug] [MainThread]: An error was encountered while trying to flush usage events
+[0m15:07:52.454927 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000018A311CD310>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000018A2DCF48C0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000018A30889F70>]}
+
+
+============================== 15:07:52.472979 | d6159953-c3af-42f0-b272-fb723afa5f0f ==============================
+[0m15:07:52.472979 [info ] [MainThread]: Running with dbt=1.11.8
+[0m15:07:52.476308 [debug] [MainThread]: running dbt with arguments {'version_check': 'True', 'no_print': 'None', 'static_parser': 'True', 'target_path': 'None', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'printer_width': '80', 'write_json': 'True', 'empty': 'None', 'log_cache_events': 'False', 'introspect': 'True', 'cache_selected_only': 'False', 'log_format': 'default', 'debug': 'False', 'fail_fast': 'False', 'profiles_dir': 'C:\\Users\\IIsra\\.dbt', 'send_anonymous_usage_stats': 'True', 'quiet': 'False', 'warn_error': 'None', 'partial_parse': 'True', 'use_colors': 'True', 'indirect_selection': 'eager', 'invocation_command': 'dbt init car_rental_dbt', 'use_experimental_parser': 'False', 'log_path': 'logs'}
+[0m15:07:52.547965 [info ] [MainThread]: A project called car_rental_dbt already exists here.
+[0m15:07:52.550452 [debug] [MainThread]: Command `dbt init` succeeded at 15:07:52.550452 after 0.70 seconds
+[0m15:07:52.553736 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000018A323DB290>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000018A31211AF0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000018A31213D70>]}
+[0m15:07:52.553736 [debug] [MainThread]: Flushing usage events
+[0m15:07:54.420686 [debug] [MainThread]: An error was encountered while trying to flush usage events

@@ -1,0 +1,14 @@
+version: 2
+
+sources:
+  - name: staging
+    schema: staging
+    tables:
+      - name: cars
+      - name: have_optional
+      - name: drivers
+      - name: rentals
+      - name: rental_offices
+      - name: drive
+      - name: insurances
+      - name: payments
