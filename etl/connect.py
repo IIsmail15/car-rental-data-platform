@@ -3,13 +3,13 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 
 load_dotenv()
-
+#
+engine = create_engine(os.environ["DATABASE_URL"])
 def get_engine():
-    return create_engine(os.environ["DATABASE_URL"])
+    return engine
 
 if __name__ == "__main__":
-    engine = get_engine()
-    with engine.connect() as conn:
+    with get_engine().connect() as conn:
         result = conn.execute(text("SELECT version()"))
         print("Connected successfully!")
         print(result.fetchone()[0])

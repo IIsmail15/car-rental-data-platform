@@ -1,2 +1,11 @@
 # .gitignore
+# dbt profiles
+car_rental_dbt/profiles.yml
+
+# Environment variables
 .env
+
+# dbt logs and target
+logs/
+target/
+dbt_packages/
