@@ -5,6 +5,12 @@ An end-to-end data engineering portfolio project that simulates a UK car rental 
 Built with Python, PostgreSQL, and dbt. Runs with a single command.
 
 ---
+## ✅ Status: Live & Deployed
+
+Pipeline deployed on **Neon serverless PostgreSQL** — cloud-hosted, 
+production-ready infrastructure.
+
+---
 
 ## 🧱 Architecture
 
@@ -92,6 +98,7 @@ Built with Python, PostgreSQL, and dbt. Runs with a single command.
 | Transformation | dbt (dbt-postgres) |
 | Environment | python-dotenv |
 | Version control | Git, GitHub |
+| Cloud warehouse | Neon (serverless PostgreSQL) |
 
 ---
 
