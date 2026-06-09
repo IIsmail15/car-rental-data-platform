@@ -58,8 +58,8 @@ CREATE TABLE IF NOT EXISTS staging.DRIVERS
     LicenseNumber VARCHAR(255) PRIMARY KEY,
     LicenseExpiration DATE,
     DriverName VARCHAR(255),
-    Birthdate DATE 
-)
+    Birthdate DATE
+);
 
 --DRIVE(LicenseNumber:DRIVERS,(Plate,PickupDate):RENTALS)
 
@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS staging.DRIVE
         REFERENCES staging.DRIVERS(LicenseNumber),  
     FOREIGN KEY (Plate, PickupDate)
         REFERENCES staging.RENTALS(Plate, PickupDate)
-)
+);
 
 
 --INSURANCES(Risk,(Plate,PickupDate):RENTALS,Cost)
@@ -86,9 +86,9 @@ CREATE TABLE IF NOT EXISTS staging.DRIVE
     PickupDate DATE,
     Cost DECIMAL(10, 2),    
     PRIMARY KEY (Risk, Plate, PickupDate),
-    FOREIGN KEY ( Plate, PickupDate) 
+    FOREIGN KEY ( Plate, PickupDate)
         REFERENCES staging.RENTALS(Plate, PickupDate)
-) 
+);
 
 --PAYMENTS((Plate,PickupDate):RENTALS,Amount,Discount,PaymentMode) 
 
@@ -101,9 +101,9 @@ CREATE TABLE IF NOT EXISTS staging.PAYMENTS
     PaymentMode VARCHAR(255),
 
     PRIMARY KEY (Plate, PickupDate),
-    FOREIGN KEY (Plate, PickupDate) 
+    FOREIGN KEY (Plate, PickupDate)
         REFERENCES staging.RENTALS(Plate, PickupDate)
-)
+);
 
 
 
