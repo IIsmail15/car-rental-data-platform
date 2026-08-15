@@ -9,3 +9,9 @@ car_rental_dbt/profiles.yml
 logs/
 target/
 dbt_packages/
+
+#helpers 
+.claude/
+
+#VSCode settings
+.vscode/

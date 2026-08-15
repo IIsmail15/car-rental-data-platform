@@ -3,8 +3,10 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 
 load_dotenv()
-#
-engine = create_engine(os.environ["DATABASE_URL"])
+
+# Create a SQLAlchemy engine using the DATABASE_URL from environment variables 
+#the env variable contains the connection strings to Neon DB severless cloud based Postgres database.  
+engine = create_engine(os.environ["DATABASE_URL"]) 
 def get_engine():
     return engine
 
