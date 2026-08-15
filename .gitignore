@@ -1,6 +1,8 @@
 # .gitignore
 # dbt profiles
 car_rental_dbt/profiles.yml
+*.dbtprofiles.yml
+.dbtprofiles.yml
 
 # Environment variables
 .env
