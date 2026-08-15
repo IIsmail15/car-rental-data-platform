@@ -3,6 +3,7 @@
 car_rental_dbt/profiles.yml
 *.dbtprofiles.yml
 .dbtprofiles.yml
+.CUsersIIsra.dbtprofiles.yml
 
 # Environment variables
 .env
