@@ -7,6 +7,7 @@ car_rental_dbt/profiles.yml
 
 # Environment variables
 .env
+.env.test
 
 # dbt logs and target
 logs/
