@@ -10,16 +10,24 @@ load_dotenv(".env.test")  # Load environment variables from .env.test file for t
 import sys 
 sys.path.insert(0,os.path.join(os.path.dirname(__file__), "etl"))  # Add the parent directory to sys.path for module imports
 
+from connect import get_engine  # Import the get_engine function from connect.py
 
-class TestDB_connection:
-    "test 1: checking connection to db"
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'car_rental_dbt'))
 
-    engine = get_engine()  # Assuming get_engine is defined in the etl module
+from generate_data import generate_offices
 
-    with engine.connect() as conn:
-        result = conn.execute(text(""" SELECT current_database(), current_user""" ))  # Execute a simple query to test the connection
-        db_name, user = result.fetchone()   
+class TestOffices: 
+    "test suite for office-related function"
 
-        assert "car_rental" in db_name 
-        print(f"Connected to database: {db_name}, User: {user}")  # Assert that the result is as expected
+    def test_offices_insertion(self):
+        "test that offices are inserted into the database"
+        engine = get_engine()
 
+        generate_offices()
+
+        with engine.connect() as conn:
+            result = conn.execute(text("SELECT COUNT(*) FROM staging.OFFICES;"))
+            count = result.scalar()  # Get the count of inserted offices
+            assert count >= 5, f"Expected at least 5 offices, got {count}"
+
+            print(f"Inserted {count} offices into the database.")
