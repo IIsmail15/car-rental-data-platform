@@ -1,33 +1,33 @@
-from dotenv import load_dotenv
-from etl.connect import get_engine
-import pytest 
+# This file includs fixtures and setup for pytest, such as database connections, test data generation, and environment variable loading. It is used to configure the testing environment.
+
+import pytest
+import sys
 import os 
-from sqlalchemy import text
+from dotenv import load_dotenv
 
 
-load_dotenv(".env.test")  # Load environment variables from .env.test file for testing
+#load test envrioment
 
-import sys 
-sys.path.insert(0,os.path.join(os.path.dirname(__file__), "etl"))  # Add the parent directory to sys.path for module imports
+load_dotenv(".env.test")
 
-from connect import get_engine  # Import the get_engine function from connect.py
-
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'etl'))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'car_rental_dbt'))
 
-from generate_data import generate_offices
+from etl.connect import get_engine  # Import the get_engine function from connect.py
 
-class TestOffices: 
-    "test suite for office-related function"
+@pytest.fixture(scope="function")
 
-    def test_offices_insertion(self):
-        "test that offices are inserted into the database"
-        engine = get_engine()
+def db_engine():
+    """
+    provide a datbase engine for tests."""
 
-        generate_offices()
+    return get_engine()
 
-        with engine.connect() as conn:
-            result = conn.execute(text("SELECT COUNT(*) FROM staging.OFFICES;"))
-            count = result.scalar()  # Get the count of inserted offices
-            assert count >= 5, f"Expected at least 5 offices, got {count}"
+@pytest.fixture(scope="function")
+def setup_test_data(db_engine):
+    """
+    provide a database connection for test"""
 
-            print(f"Inserted {count} offices into the database.")
+    conn = db_engine.connect()
+    yield conn
+    conn.close()
