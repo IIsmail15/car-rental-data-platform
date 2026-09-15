@@ -5,9 +5,10 @@ An end-to-end data engineering portfolio project that simulates a UK car rental 
 Built with Python, PostgreSQL, and dbt. Runs with a single command.
 
 ---
+
 ## ✅ Status: Live & Deployed
 
-Pipeline deployed on **Neon serverless PostgreSQL** — cloud-hosted, 
+Pipeline deployed on **Neon serverless PostgreSQL** — cloud-hosted,
 production-ready infrastructure.
 
 ---
@@ -90,14 +91,14 @@ production-ready infrastructure.
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Data generation | Python, Faker |
-| Database | PostgreSQL 15 |
-| DB connection | SQLAlchemy, psycopg2 |
-| Transformation | dbt (dbt-postgres) |
-| Environment | python-dotenv |
-| Version control | Git, GitHub |
+| Layer           | Technology                   |
+| --------------- | ---------------------------- |
+| Data generation | Python, Faker                |
+| Database        | PostgreSQL 15                |
+| DB connection   | SQLAlchemy, psycopg2         |
+| Transformation  | dbt (dbt-postgres)           |
+| Environment     | python-dotenv                |
+| Version control | Git, GitHub                  |
 | Cloud warehouse | Neon (serverless PostgreSQL) |
 
 ---
@@ -141,6 +142,7 @@ car-rental-data-platform/
 ## ⚙️ How to Run
 
 ### Prerequisites
+
 - Python 3.9+
 - PostgreSQL 15 (or Docker)
 - dbt-postgres installed
@@ -171,6 +173,7 @@ python -m etl.main
 ```
 
 This single command:
+
 1. Creates the staging schema and all OLTP tables
 2. Generates realistic UK car rental data using Faker
 3. Runs all dbt models to build the warehouse
@@ -182,33 +185,52 @@ cd car_rental_dbt
 dbt run
 ```
 
+### CI/CD
+
+GitHub Actions runs the Python tests and the complete dbt pipeline against an
+isolated PostgreSQL service on every pull request and push to `main`. The
+workflow is defined in `.github/workflows/ci.yml`.
+
+The production deployment workflow is manual and runs from the GitHub Actions
+tab using the `production` environment. Configure these environment secrets
+before running `.github/workflows/deploy.yml`:
+
+```text
+DATABASE_URL
+DB_HOST
+DB_PORT
+DB_NAME
+PGUSER
+PGPASSWORD
+```
+
 ---
 
 ## 🗃️ Staging Schema (OLTP)
 
 Eight normalised tables modelling a real car rental business:
 
-| Table | Description |
-|-------|-------------|
-| `RENTAL_OFFICES` | UK pickup and dropoff locations |
-| `CARS` | Fleet of vehicles with plate, brand, fuel type |
-| `HAVE_OPTIONAL` | Optional features per car (GPS, child seat etc.) |
-| `DRIVERS` | Licensed drivers with expiry dates |
-| `RENTALS` | Core rental records — car, dates, offices, miles |
-| `DRIVE` | Links drivers to rentals |
-| `INSURANCES` | Risk level and cost per rental |
-| `PAYMENTS` | Amount, discount, and payment mode per rental |
+| Table            | Description                                      |
+| ---------------- | ------------------------------------------------ |
+| `RENTAL_OFFICES` | UK pickup and dropoff locations                  |
+| `CARS`           | Fleet of vehicles with plate, brand, fuel type   |
+| `HAVE_OPTIONAL`  | Optional features per car (GPS, child seat etc.) |
+| `DRIVERS`        | Licensed drivers with expiry dates               |
+| `RENTALS`        | Core rental records — car, dates, offices, miles |
+| `DRIVE`          | Links drivers to rentals                         |
+| `INSURANCES`     | Risk level and cost per rental                   |
+| `PAYMENTS`       | Amount, discount, and payment mode per rental    |
 
 ---
 
 ## 🔄 dbt Models
 
-| Model | Type | Description |
-|-------|------|-------------|
-| `dim_car` | table | Cars with optionals aggregated via `string_agg` |
-| `dim_driver` | table | Driver dimension from staging |
-| `dim_office` | table | Office locations dimension |
-| `dim_date` | table | Date attributes extracted from pickup dates |
+| Model         | Type  | Description                                            |
+| ------------- | ----- | ------------------------------------------------------ |
+| `dim_car`     | table | Cars with optionals aggregated via `string_agg`        |
+| `dim_driver`  | table | Driver dimension from staging                          |
+| `dim_office`  | table | Office locations dimension                             |
+| `dim_date`    | table | Date attributes extracted from pickup dates            |
 | `fact_rental` | table | Central fact table — joins all dims via surrogate keys |
 
 dbt resolves model dependencies automatically via `{{ ref() }}` — dimensions are always built before the fact table.
@@ -233,14 +255,14 @@ The project simulates a UK car rental business. Using `Faker('en_GB')` generates
 
 ## 📊 Sample Data Generated
 
-| Entity | Count |
-|--------|-------|
-| Rental offices | 5 |
-| Cars | 50 |
-| Drivers | 40 |
-| Rentals | 200 |
-| Insurance records | ~400 |
-| Payments | 200 |
+| Entity            | Count |
+| ----------------- | ----- |
+| Rental offices    | 5     |
+| Cars              | 50    |
+| Drivers           | 40    |
+| Rentals           | 200   |
+| Insurance records | ~400  |
+| Payments          | 200   |
 
 ---
 

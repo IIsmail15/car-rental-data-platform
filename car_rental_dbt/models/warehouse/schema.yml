@@ -1,0 +1,42 @@
+version: 2
+
+models:
+  - name: fact_rental
+    columns:
+      - name: car_plate
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_car')
+                field: plate
+
+      - name: driver_license
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_driver')
+                field: licensenumber
+
+      - name: pickup_office
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_office')
+                field: officename
+
+      - name: dropoff_office
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_office')
+                field: officename
+
+      - name: payment_mode
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["Credit Card", "Debit Card", "Cash", "Bank Transfer"]

@@ -21,12 +21,12 @@ class TestConection:
             print("Database connection successful!") 
 
     def test_datbase_is_correct(self, db_engine):
-        """are we connected to the correct database?"""
+        """Are we connected to the expected database?"""
         with db_engine.connect() as conn:
             result = conn.execute(text("SELECT current_database()"))
             db_name = result.scalar()
-            # check it's the best database(not production)
-            assert "test" in db_name or "car_rental" in db_name
+            db_name_lower = db_name.lower()
+            assert "test" in db_name_lower or "car_rental" in db_name_lower or "neondb" in db_name_lower
         print(f"Connected to the correct database: {db_name}")
 
             

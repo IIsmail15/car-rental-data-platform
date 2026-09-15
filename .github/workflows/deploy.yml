@@ -1,0 +1,62 @@
+name: Deploy dbt warehouse
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_PORT: ${{ secrets.DB_PORT }}
+      PGUSER: ${{ secrets.PGUSER }}
+      PGPASSWORD: ${{ secrets.PGPASSWORD }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Configure dbt profile
+        shell: bash
+        run: |
+          test -n "$DB_HOST" || (echo "Missing DB_HOST secret" && exit 1)
+          test -n "$PGUSER" || (echo "Missing PGUSER secret" && exit 1)
+          test -n "$PGPASSWORD" || (echo "Missing PGPASSWORD secret" && exit 1)
+          test -n "$DB_NAME" || (echo "Missing DB_NAME secret" && exit 1)
+          mkdir -p "$HOME/.dbt"
+          cat > "$HOME/.dbt/profiles.yml" <<'EOF'
+          car_rental_dbt:
+            target: dev
+            outputs:
+              dev:
+                type: postgres
+                host: "{{ env_var('DB_HOST') }}"
+                user: "{{ env_var('PGUSER') }}"
+                password: "{{ env_var('PGPASSWORD') }}"
+                port: "{{ env_var('DB_PORT') | int }}"
+                dbname: "{{ env_var('DB_NAME') }}"
+                schema: warehouse
+                threads: 1
+                sslmode: require
+          EOF
+
+      - name: Load and transform production data
+        run: python -m etl.main
+
+      - name: Verify production warehouse
+        run: dbt test --project-dir car_rental_dbt

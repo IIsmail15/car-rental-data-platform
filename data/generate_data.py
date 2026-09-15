@@ -65,6 +65,7 @@ def generate_cars(n= 50):
         VALUES (%s, %s, %s, %s, %s, %s) 
         ON CONFLICT DO NOTHING;
         """,cars)
+    conn.commit()
     print(f"Inserted {len(cars)} cars") 
 
 def generate_have_optional():
@@ -88,7 +89,7 @@ def generate_have_optional():
         VALUES (%s, %s)
         ON CONFLICT DO NOTHING;
     """, rows)
-
+    conn.commit()
     print(f"Inserted {len(rows)} optional features")
 
 def generate_drivers(n=40):
@@ -118,7 +119,7 @@ def generate_drivers(n=40):
         VALUES (%s, %s, %s, %s)
         ON CONFLICT DO NOTHING;
     """, drivers)
-
+    conn.commit()
     print(f"Inserted {len(drivers)} drivers")
 
 
@@ -161,7 +162,7 @@ def generate_rentals(n=200):
         VALUES (%s, %s, %s, %s, %s, %s)
         ON CONFLICT DO NOTHING;
     """, rentals)
-
+    conn.commit()
     print(f"Inserted {len(rentals)} rentals") 
 
 
@@ -184,7 +185,7 @@ def generate_drive():
         VALUES (%s, %s, %s)
         ON CONFLICT DO NOTHING;
     """, rows)
-
+    conn.commit()
     print(f"Inserted {len(rows)} drive records")
 
 def generate_insurances():
@@ -210,7 +211,7 @@ def generate_insurances():
         VALUES (%s, %s, %s, %s)
         ON CONFLICT DO NOTHING;
     """, rows)
-
+    conn.commit()
     print(f"Inserted {len(rows)} insurance records")
 
 def generate_payments():
@@ -232,7 +233,7 @@ def generate_payments():
         VALUES (%s, %s, %s, %s, %s)
         ON CONFLICT DO NOTHING;
     """, rows)
-
+    conn.commit()
     print(f"Inserted {len(rows)} payment records")
 
 

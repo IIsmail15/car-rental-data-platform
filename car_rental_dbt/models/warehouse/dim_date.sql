@@ -1,8 +1,8 @@
 {{ config(materialized='table') }}
 
 with rental_dates as (
-    select distinct pickupdate as date_value
-    from {{ source('staging', 'rentals') }}
+    select distinct pickup_date as date_value
+    from {{ ref('stg_rentals') }}
 )
 
 select

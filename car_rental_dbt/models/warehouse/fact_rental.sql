@@ -1,28 +1,28 @@
 {{ config(materialized='table') }}
 
 with rentals as (
-    select * from {{ source('staging', 'rentals') }}
+    select * from {{ ref('stg_rentals') }}
 ),
 
 payments as (
-    select * from {{ source('staging', 'payments') }}
+    select * from {{ ref('stg_payments') }}
 ),
 
 insurances as (
     select
         plate,
-        pickupdate,
+        pickup_date,
         sum(cost) as insurance_cost
-    from {{ source('staging', 'insurances') }}
-    group by plate, pickupdate
+    from {{ ref('stg_insurances') }}
+    group by plate, pickup_date
 ),
 
 drive as (
-    select distinct on (plate, pickupdate)
+    select distinct on (plate, pickup_date)
         plate,
-        pickupdate,
-        licensenumber
-    from {{ source('staging', 'drive') }}
+        pickup_date,
+        license_number
+    from {{ ref('stg_drive') }}
 ),
 
 dim_car as (
@@ -44,26 +44,26 @@ dim_date as (
 joined as (
     select
         rentals.plate,
-        rentals.pickupdate,
-        rentals.dropoffdate,
-        rentals.pickupplace,
-        rentals.dropoffplace,
+        rentals.pickup_date,
+        rentals.dropoff_date,
+        rentals.pickup_place,
+        rentals.dropoff_place,
         rentals.miles,
         payments.amount,
         payments.discount,
-        payments.paymentmode,
+        payments.payment_mode,
         insurances.insurance_cost,
-        drive.licensenumber
+        drive.license_number
     from rentals
     left join payments
         on rentals.plate = payments.plate
-        and rentals.pickupdate = payments.pickupdate
+        and rentals.pickup_date = payments.pickup_date
     left join insurances
         on rentals.plate = insurances.plate
-        and rentals.pickupdate = insurances.pickupdate
+        and rentals.pickup_date = insurances.pickup_date
     left join drive
         on rentals.plate = drive.plate
-        and rentals.pickupdate = drive.pickupdate
+        and rentals.pickup_date = drive.pickup_date
 )
 
 select
@@ -72,20 +72,20 @@ select
     dim_office_pickup.officename            as pickup_office,
     dim_office_dropoff.officename           as dropoff_office,
     dim_date.date_value                     as pickup_date,
-    joined.dropoffdate,
+    joined.dropoff_date,
     joined.miles,
     joined.amount,
     joined.discount,
-    joined.paymentmode,
+    joined.payment_mode,
     joined.insurance_cost
 from joined
 left join dim_car
     on joined.plate = dim_car.plate
 left join dim_driver
-    on joined.licensenumber = dim_driver.licensenumber
+    on joined.license_number = dim_driver.licensenumber
 left join dim_office as dim_office_pickup
-    on joined.pickupplace = dim_office_pickup.officename
+    on joined.pickup_place = dim_office_pickup.officename
 left join dim_office as dim_office_dropoff
-    on joined.dropoffplace = dim_office_dropoff.officename
+    on joined.dropoff_place = dim_office_dropoff.officename
 left join dim_date
-    on joined.pickupdate = dim_date.date_value
+    on joined.pickup_date = dim_date.date_value

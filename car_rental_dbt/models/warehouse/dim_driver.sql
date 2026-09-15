@@ -1,12 +1,12 @@
 {{ config(materialized='table') }}
 
 with drivers as (
-    select * from {{ source('staging', 'drivers') }}
+    select * from {{ ref('stg_drivers') }}
 )
 
 select
-    licensenumber,
-    licenseexpiration,
-    drivername,
+    license_number as licensenumber,
+    license_expiration as licenseexpiration,
+    driver_name as drivername,
     birthdate
 from drivers

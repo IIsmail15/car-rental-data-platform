@@ -1,11 +1,11 @@
 {{ config(materialized='table') }}
 
 with offices as (
-    select * from {{ source('staging', 'rental_offices') }}
+    select * from {{ ref('stg_rental_offices') }}
 )
 
 select
-    officename,
+    office_name as officename,
     city,
     area,
     state,
