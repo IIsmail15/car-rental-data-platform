@@ -39,7 +39,9 @@ jobs:
       - name: Configure dbt profile
         shell: bash
         run: |
+          test -n "$DATABASE_URL" || (echo "Missing DATABASE_URL secret" && exit 1)
           test -n "$DB_HOST" || (echo "Missing DB_HOST secret" && exit 1)
+          test -n "$DB_PORT" || (echo "Missing DB_PORT secret" && exit 1)
           test -n "$PGUSER" || (echo "Missing PGUSER secret" && exit 1)
           test -n "$PGPASSWORD" || (echo "Missing PGPASSWORD secret" && exit 1)
           test -n "$DB_NAME" || (echo "Missing DB_NAME secret" && exit 1)
