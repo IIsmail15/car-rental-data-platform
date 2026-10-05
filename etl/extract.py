@@ -16,6 +16,7 @@ def extract() -> dict[str, pd.DataFrame]:
     dfs = {}
     for table in STAGING_TABLES:
         dfs[table] = pd.read_sql(f"SELECT * FROM staging.{table}", engine)
+        dfs[table].to_parquet(f"{table}.parquet", index=False)
         print(f"Extracted {len(dfs[table])} rows from staging.{table}")
     return dfs
 

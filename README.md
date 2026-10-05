@@ -1,272 +1,262 @@
-# 🚗 Car Rental Data Platform
+# Car Rental Data Platform
 
-An end-to-end data engineering portfolio project that simulates a UK car rental business — from raw transactional data through to an analytics-ready data warehouse.
+A data engineering portfolio project that simulates a UK car rental business, generates transactional data in PostgreSQL, and builds an analytical warehouse with dbt.
 
-Built with Python, PostgreSQL, and dbt. Runs with a single command.
+The implemented pipeline uses Python, Faker, PostgreSQL, and dbt. GitHub Actions validates it against an isolated database and includes a deployment workflow for a configured PostgreSQL target. The repository also contains Terraform definitions for an Azure data platform.
 
----
+## Architecture
 
-## ✅ Status: Live & Deployed
-
-Pipeline deployed on **Neon serverless PostgreSQL** — cloud-hosted,
-production-ready infrastructure.
-
----
-
-## 🧱 Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                          SOURCE LAYER                               │
-│                                                                     │
-│   Python + Faker → Generates realistic UK car rental data           │
-└────────────────────────────────┬────────────────────────────────────┘
-                                 │
-                                 ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                         STAGING SCHEMA (OLTP)                       │
-│                                                                     │
-│   RENTAL_OFFICES   CARS   HAVE_OPTIONAL   DRIVERS                   │
-│   RENTALS   DRIVE   INSURANCES   PAYMENTS                           │
-│                                                                     │
-│   PostgreSQL — normalised relational tables                         │
-└────────────────────────────────┬────────────────────────────────────┘
-                                 │
-                                 ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                      TRANSFORMATION LAYER (dbt)                     │
-│                                                                     │
-│   dim_car ──────────────────────────────────────┐                   │
-│   dim_driver ────────────────────────────────── ▼                   │
-│   dim_office ──────────────────────────────► fact_rental            │
-│   dim_date ─────────────────────────────────────┘                   │
-│                                                                     │
-│   dbt manages dependencies, materialisation, and lineage            │
-└────────────────────────────────┬────────────────────────────────────┘
-                                 │
-                                 ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                       WAREHOUSE SCHEMA (Star Schema)                │
-│                                                                     │
-│   dim_car   dim_driver   dim_office   dim_date   fact_rental        │
-│                                                                     │
-│   PostgreSQL — analytics-ready, query-optimised                     │
-└─────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    A[Python + Faker: UK rental data] --> B[PostgreSQL staging schema: 8 source tables]
+    B --> C[dbt: 8 stg_ models]
+    C --> D[dbt: 4 dimensions + fact_rental]
+    D --> E[PostgreSQL warehouse schema]
 ```
 
----
+`python -m etl.main` creates the `staging` and `warehouse` schemas, generates sample data, and runs `dbt run`. dbt manages transformation dependencies through `source()` and `ref()`.
 
-## ⭐ Star Schema
+With the profile shown below, all 13 dbt models are materialised as tables in `warehouse`. The models under `models/staging/` standardise source column names; the raw source tables remain in the separate `staging` schema.
 
-```
-                        ┌─────────────┐
-                        │  dim_date   │
-                        │─────────────│
-                        │ date_value  │
-                        │ year        │
-                        │ month       │
-                        │ quarter     │
-                        │ is_weekend  │
-                        └──────┬──────┘
-                               │
-  ┌─────────────┐    ┌─────────┴──────────┐    ┌─────────────┐
-  │   dim_car   │    │    fact_rental      │    │ dim_driver  │
-  │─────────────│    │────────────────────│    │─────────────│
-  │ plate       │◄───│ car_plate          │    │ licensenumber│
-  │ category    │    │ driver_license     │───►│ drivername  │
-  │ model       │    │ pickup_office      │    │ birthdate   │
-  │ brand       │    │ dropoff_office     │    └─────────────┘
-  │ fuel        │    │ pickup_date        │
-  │ optional    │    │ dropoff_date       │    ┌─────────────┐
-  └─────────────┘    │ miles             │    │ dim_office  │
-                     │ amount            │───►│─────────────│
-                     │ discount          │    │ officename  │
-                     │ payment_mode      │    │ city        │
-                     │ insurance_cost    │    │ area        │
-                     └────────────────────┘    │ country     │
-                                               └─────────────┘
-```
+## Technology
 
----
+| Component | Technology |
+| --- | --- |
+| Sample data | Python, Faker with `en_GB` locale |
+| Database access | SQLAlchemy, psycopg2, python-dotenv |
+| Local and CI database | PostgreSQL 15 |
+| Transformations | dbt-postgres |
+| Data extraction utility | pandas |
+| Validation and automation | pytest, dbt tests, GitHub Actions |
+| Azure infrastructure definitions | Terraform, AzureRM provider, ADLS Gen2, PostgreSQL 16, Data Factory, Databricks |
 
-## 🛠️ Tech Stack
+## Run locally
 
-| Layer           | Technology                   |
-| --------------- | ---------------------------- |
-| Data generation | Python, Faker                |
-| Database        | PostgreSQL 15                |
-| DB connection   | SQLAlchemy, psycopg2         |
-| Transformation  | dbt (dbt-postgres)           |
-| Environment     | python-dotenv                |
-| Version control | Git, GitHub                  |
-| Cloud warehouse | Neon (serverless PostgreSQL) |
+Use Python 3.12, matching CI, and Docker Compose for the local PostgreSQL database. Run commands from the repository root unless stated otherwise.
 
----
-
-## 📁 Project Structure
-
-```
-car-rental-data-platform/
-├── .env                        # DB credentials (not committed)
-├── .env.example                # Template for DB credentials
-├── .gitignore
-├── docker-compose.yml          # Postgres 15 container
-├── requirements.txt
-├── etl/
-│   ├── connect.py              # SQLAlchemy engine
-│   ├── setup_db.py             # Creates staging schema + tables
-│   ├── extract.py              # Reads staging tables into DataFrames
-│   └── main.py                 # Pipeline orchestrator
-├── data/
-│   ├── generate_data.py        # Faker data generation
-│   └── sample_data.sql         # Manual seed for rental offices
-├── init/
-│   ├── 01_staging_schema.sql   # Docker init: staging schema + tables
-│   └── 02_warehouse_schema.sql # Docker init: warehouse schema (dbt-managed)
-├── car_rental_dbt/
-│   ├── models/
-│   │   ├── staging/
-│   │   │   └── sources.yml     # Declares staging tables as dbt sources
-│   │   └── warehouse/
-│   │       ├── dim_car.sql
-│   │       ├── dim_driver.sql
-│   │       ├── dim_office.sql
-│   │       ├── dim_date.sql
-│   │       └── fact_rental.sql
-│   └── dbt_project.yml
-└── README.md
-```
-
----
-
-## ⚙️ How to Run
-
-### Prerequisites
-
-- Python 3.9+
-- PostgreSQL 15 (or Docker)
-- dbt-postgres installed
-
-### Setup
+### 1. Install dependencies
 
 ```bash
-# Clone the repo
 git clone https://github.com/IIsmail15/car-rental-data-platform.git
 cd car-rental-data-platform
+python -m venv .venv
+```
 
-# Install dependencies
-pip install -r requirements.txt
+Activate the environment:
 
-# Start Postgres via Docker (optional — skip if using a local instance)
-docker-compose up -d
+```powershell
+# Windows PowerShell
+.\.venv\Scripts\Activate.ps1
+```
 
-# Create your .env file from the template and fill in your credentials
+```bash
+# macOS / Linux
+source .venv/bin/activate
+```
+
+Then install the Python dependencies, including dbt and pytest:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+### 2. Start PostgreSQL and configure Python
+
+```bash
+docker compose up -d
+docker compose exec postgres pg_isready -U postgres -d car_rental
+```
+
+Wait until PostgreSQL reports that it is accepting connections. Compose exposes port `5432`, creates the `car_rental` database, and persists data in the `postgres_data` volume.
+
+Copy [`.env.example`](.env.example) to `.env`:
+
+```powershell
+# Windows PowerShell
+Copy-Item .env.example .env
+```
+
+```bash
+# macOS / Linux
 cp .env.example .env
 ```
 
-> **dbt profile**: dbt reads its connection config from `~/.dbt/profiles.yml`. Make sure a profile named `car_rental_dbt` exists there pointing to your database. The `.env` file is used by the Python pipeline only.
+The template matches the local Compose database:
 
-### Run the full pipeline
+```dotenv
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/car_rental
+```
+
+To use an existing PostgreSQL database, skip Docker and set `DATABASE_URL` to its connection string. For Neon, use your Neon connection string with `sslmode=require`. Configure dbt to use the same database in the next step.
+
+### 3. Configure dbt
+
+Create `~/.dbt/profiles.yml` (`$HOME\.dbt\profiles.yml` on Windows), creating the `.dbt` directory if needed. Add this profile for the local Compose database:
+
+```yaml
+car_rental_dbt:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: localhost
+      user: postgres
+      password: postgres
+      port: 5432
+      dbname: car_rental
+      schema: warehouse
+      threads: 1
+```
+
+For a remote database, replace the connection fields and set `sslmode: require` when required by the host. Keep credentials out of version control. Python loads `.env`; a standalone dbt command reads its profile and does not load `.env` automatically.
+
+### 4. Build and validate the warehouse
 
 ```bash
+dbt debug --project-dir car_rental_dbt
 python -m etl.main
+dbt test --project-dir car_rental_dbt
 ```
 
-This single command:
+The pipeline command runs these steps:
 
-1. Creates the staging schema and all OLTP tables
-2. Generates realistic UK car rental data using Faker
-3. Runs all dbt models to build the warehouse
+1. Creates missing schemas and the eight source tables.
+2. Generates offices, cars, optional features, drivers, rentals, driver assignments, insurance records, and payments.
+3. Runs all dbt models to rebuild the transformed tables.
 
-### Run dbt only
+Tests are a separate step; `etl.main` does not run them. Repeated pipeline runs add random source data and can add assignments or features to existing records. They do not reset the database or reproduce a fixed dataset.
+
+To rebuild and test the models using existing source data:
 
 ```bash
-cd car_rental_dbt
-dbt run
+dbt build --project-dir car_rental_dbt
 ```
 
-### CI/CD
+## Data model
 
-GitHub Actions runs the Python tests and the complete dbt pipeline against an
-isolated PostgreSQL service on every pull request and push to `main`. The
-workflow is defined in `.github/workflows/ci.yml`.
+### Source tables
 
-The production deployment workflow is manual and runs from the GitHub Actions
-tab using the `production` environment. Configure these environment secrets
-before running `.github/workflows/deploy.yml`:
+| Table in `staging` | Purpose |
+| --- | --- |
+| `rental_offices` | UK pickup and dropoff locations |
+| `cars` | Vehicle plate, category, model, brand, fuel, and registration date |
+| `have_optional` | Optional features associated with each car |
+| `drivers` | Driver identity and licence details |
+| `rentals` | Rental dates, locations, and mileage; keyed by `(plate, pickupdate)` |
+| `drive` | Driver assignments to rentals |
+| `insurances` | Risk level and cost per rental |
+| `payments` | Amount, discount, and payment mode per rental |
+
+### Warehouse models
+
+| Model | Purpose |
+| --- | --- |
+| `stg_*` (8 models) | Select source fields and standardise column names |
+| `dim_car` | Vehicle attributes with optional features combined using `string_agg` |
+| `dim_driver` | Driver attributes keyed by `licensenumber` |
+| `dim_office` | Office attributes keyed by `officename` |
+| `dim_date` | Distinct pickup dates with calendar attributes |
+| `fact_rental` | Rental measures joined to cars, drivers, offices, dates, payments, and aggregated insurance costs |
+
+The fact table has one row per rental, identified by `(car_plate, pickup_date)`, and uses natural keys: car plate, driver licence, office name, and date. Pickup and dropoff offices both reference `dim_office`. `dim_date` covers pickup dates only; `dropoff_date` remains a date column on the fact table.
+
+Insurance costs are summed per rental before joining. If a rental has multiple driver assignments, the current model selects one with `DISTINCT ON`; without an ordering rule, the selected driver is not deterministic.
+
+### Sample data
+
+Defaults for a first run against an empty database:
+
+| Entity | Count |
+| --- | --- |
+| Rental offices | 5 |
+| Cars | 50 |
+| Drivers | 40 |
+| Rentals | 200 |
+| Driver assignments | 200 |
+| Insurance records | 200-400 (1-2 per rental) |
+| Payments | 200 |
+
+Optional features are assigned randomly to approximately 60% of cars. Generated values and totals on subsequent runs vary.
+
+## Tests
+
+Python tests cover database connectivity, data generation, and source data checks. **Their fixture deletes all rows from the eight staging tables before each test. Use a dedicated test database.**
+
+For the local Compose service, create it once:
+
+```bash
+docker compose exec postgres createdb -U postgres car_rental_test
+```
+
+Create `.env.test` in the repository root:
+
+```dotenv
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/car_rental_test
+```
+
+An existing shell `DATABASE_URL` takes precedence over `.env.test`; ensure it is unset or points to the test database before running:
+
+```bash
+python -m pytest -q
+```
+
+The configured dbt tests check non-null dimension references, relationships to car/driver/office dimensions, and accepted payment modes. The file `car_rental_dbt/tests/rental_dates_are_valid.sql` is currently empty, so it does not implement a dbt date check.
+
+## CI and deployment
+
+[`ci.yml`](.github/workflows/ci.yml) runs on pushes to `main` and pull requests targeting `main`. It uses Python 3.12 and an isolated PostgreSQL 15 service to run pytest, validate the dbt profile, execute the full pipeline, and run dbt tests.
+
+[`deploy.yml`](.github/workflows/deploy.yml) runs manually or after a successful `CI` workflow run on `main`. It uses the GitHub `production` environment and requires these secrets:
+
+| Secret | Used by |
+| --- | --- |
+| `DATABASE_URL` | Python setup and data generation |
+| `DB_HOST`, `DB_PORT`, `DB_NAME` | dbt connection |
+| `PGUSER`, `PGPASSWORD` | dbt authentication |
+
+Both connection configurations must identify the same database. Deployment requires SSL for dbt, runs the full pipeline (including sample data generation), and then runs dbt tests. Environment protection rules may require approval before the job starts.
+
+## Azure infrastructure
+
+[`infra/terraform/`](infra/terraform/) defines:
+
+- An Azure resource group.
+- An ADLS Gen2 storage account with `raw` and `curated` filesystems.
+- A PostgreSQL 16 Flexible Server and `car_rental` database.
+- An Azure Data Factory instance.
+- A Premium Azure Databricks workspace.
+
+The configuration requires Terraform `>= 1.6.0` and AzureRM `~> 4.0`. Defaults are `Sweden Central`, project name `carrental`, and environment `dev`; required PostgreSQL administrator values are shown in [`terraform.tfvars.example`](infra/terraform/terraform.tfvars.example).
+
+These files define infrastructure; the repository does not yet define Data Factory pipelines, Databricks jobs, or a data flow through ADLS. The Python/dbt pipeline connects directly to PostgreSQL. Deployment status of the cloud resources is not established by these configuration files.
+
+## Project structure
 
 ```text
-DATABASE_URL
-DB_HOST
-DB_PORT
-DB_NAME
-PGUSER
-PGPASSWORD
+car-rental-data-platform/
+|-- .env.example              # Python connection template
+|-- .github/workflows/        # CI and deployment
+|-- docker-compose.yml       # Local PostgreSQL 15
+|-- requirements.txt         # Python, dbt, and test dependencies
+|-- data/
+|   |-- generate_data.py     # UK rental sample data
+|   `-- sample_data.sql      # Manual office seed
+|-- etl/
+|   |-- connect.py           # SQLAlchemy engine
+|   |-- setup_db.py          # Schemas and source tables
+|   |-- extract.py           # Standalone pandas extraction utility
+|   `-- main.py              # Setup, generation, and dbt orchestration
+|-- init/                    # Docker init SQL and legacy schema comments
+|-- car_rental_dbt/
+|   |-- dbt_project.yml
+|   |-- models/staging/      # Source declarations and 8 staging models
+|   |-- models/warehouse/    # 4 dimensions, fact table, and model tests
+|   `-- tests/               # Singular SQL tests
+|-- tests/                   # Python database tests
+`-- infra/terraform/         # Azure infrastructure definitions
 ```
 
----
-
-## 🗃️ Staging Schema (OLTP)
-
-Eight normalised tables modelling a real car rental business:
-
-| Table            | Description                                      |
-| ---------------- | ------------------------------------------------ |
-| `RENTAL_OFFICES` | UK pickup and dropoff locations                  |
-| `CARS`           | Fleet of vehicles with plate, brand, fuel type   |
-| `HAVE_OPTIONAL`  | Optional features per car (GPS, child seat etc.) |
-| `DRIVERS`        | Licensed drivers with expiry dates               |
-| `RENTALS`        | Core rental records — car, dates, offices, miles |
-| `DRIVE`          | Links drivers to rentals                         |
-| `INSURANCES`     | Risk level and cost per rental                   |
-| `PAYMENTS`       | Amount, discount, and payment mode per rental    |
-
----
-
-## 🔄 dbt Models
-
-| Model         | Type  | Description                                            |
-| ------------- | ----- | ------------------------------------------------------ |
-| `dim_car`     | table | Cars with optionals aggregated via `string_agg`        |
-| `dim_driver`  | table | Driver dimension from staging                          |
-| `dim_office`  | table | Office locations dimension                             |
-| `dim_date`    | table | Date attributes extracted from pickup dates            |
-| `fact_rental` | table | Central fact table — joins all dims via surrogate keys |
-
-dbt resolves model dependencies automatically via `{{ ref() }}` — dimensions are always built before the fact table.
-
----
-
-## 🧠 Design Decisions
-
-**Why dbt for transformation?**
-The staging → warehouse transformation is exactly dbt's core use case. Rather than writing Pandas joins and loading back to PostgreSQL manually, dbt reads from staging and materialises warehouse tables directly — with automatic dependency resolution, lineage tracking, and documentation built in.
-
-**Why a star schema?**
-The warehouse is optimised for analytical queries — e.g. total revenue by office, average miles by car category, rental frequency by month. A star schema with one central fact table and four dimension tables makes these queries simple and fast.
-
-**Why separate staging and warehouse schemas?**
-Staging mirrors the source OLTP system. Warehouse is analytics-ready. Keeping them separate means the raw data is always preserved and the transformation logic lives entirely in dbt, not scattered across SQL scripts.
-
-**Why Faker with UK locale?**
-The project simulates a UK car rental business. Using `Faker('en_GB')` generates realistic British names, and UK-style number plates add authenticity to the dataset.
-
----
-
-## 📊 Sample Data Generated
-
-| Entity            | Count |
-| ----------------- | ----- |
-| Rental offices    | 5     |
-| Cars              | 50    |
-| Drivers           | 40    |
-| Rentals           | 200   |
-| Insurance records | ~400  |
-| Payments          | 200   |
-
----
-
-## 👩‍💻 Author
+## Author
 
 **Israa** — MSc Data Science & Business Analytics, Bologna Business School  
 [GitHub](https://github.com/IIsmail15)
