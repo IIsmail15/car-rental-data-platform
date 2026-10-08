@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "factoryName": {
+      "value": "adf-carrental-dev"
+    },
+    "ls_postgres_carrental_password": {
+      "value": ""
+    },
+    "AzureDataLakeStorage1_accountKey": {
+      "value": ""
+    },
+    "ls_postgres_carrental_properties_typeProperties_server": {
+      "value": "psql-carrental-dev.postgres.database.azure.com"
+    },
+    "ls_postgres_carrental_properties_typeProperties_database": {
+      "value": "car_rental"
+    },
+    "ls_postgres_carrental_properties_typeProperties_username": {
+      "value": "carrentaladmin"
+    },
+    "AzureDataLakeStorage1_properties_typeProperties_url": {
+      "value": "https://stcarrentaldev.dfs.core.windows.net/"
+    }
+  }
+}

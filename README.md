@@ -2,9 +2,26 @@
 
 A data engineering portfolio project that simulates a UK car rental business, generates transactional data in PostgreSQL, and builds an analytical warehouse with dbt.
 
-The implemented pipeline uses Python, Faker, PostgreSQL, and dbt. GitHub Actions validates it against an isolated database and includes a deployment workflow for a configured PostgreSQL target. The repository also contains Terraform definitions for an Azure data platform.
+The project includes a Python/dbt warehouse workflow and an Azure data lake workflow using Data Factory, ADLS Gen2, and Databricks. GitHub Actions validates the PostgreSQL/dbt workflow against an isolated database and includes a deployment workflow for a configured PostgreSQL target.
 
 ## Architecture
+
+### Azure data lake workflow
+
+```mermaid
+flowchart LR
+    A[PostgreSQL: 8 staging tables] --> B[ADF: ForEach + Copy]
+    B --> C[ADLS raw: Parquet]
+    C --> D[Databricks: validate and standardise]
+    D --> E[ADLS curated: Delta]
+    E --> F[Unity Catalog: external tables]
+```
+
+The [ADF export](adf/README.md) copies all eight tables to `raw/<table>/<TABLE>.parquet`. The [Databricks notebooks](notebooks/README.md) validate keys, references, and rental dates, standardise column names, add a processing timestamp, write Delta tables, and register them in Unity Catalog.
+
+ADF ingestion and notebook execution are currently run separately. The data lake workflow is not yet connected to the dbt warehouse workflow below; its warehouse target and automated orchestration remain to be implemented.
+
+### PostgreSQL/dbt workflow
 
 ```mermaid
 flowchart TD
@@ -26,6 +43,7 @@ With the profile shown below, all 13 dbt models are materialised as tables in `w
 | Database access | SQLAlchemy, psycopg2, python-dotenv |
 | Local and CI database | PostgreSQL 15 |
 | Transformations | dbt-postgres |
+| Data lake transformations | Databricks, PySpark, Delta Lake, Unity Catalog |
 | Data extraction utility | pandas |
 | Validation and automation | pytest, dbt tests, GitHub Actions |
 | Azure infrastructure definitions | Terraform, AzureRM provider, ADLS Gen2, PostgreSQL 16, Data Factory, Databricks |
@@ -228,7 +246,7 @@ Both connection configurations must identify the same database. Deployment requi
 
 The configuration requires Terraform `>= 1.6.0` and AzureRM `~> 4.0`. Defaults are `Sweden Central`, project name `carrental`, and environment `dev`; required PostgreSQL administrator values are shown in [`terraform.tfvars.example`](infra/terraform/terraform.tfvars.example).
 
-These files define infrastructure; the repository does not yet define Data Factory pipelines, Databricks jobs, or a data flow through ADLS. The Python/dbt pipeline connects directly to PostgreSQL. Deployment status of the cloud resources is not established by these configuration files.
+The ADF child resources and Databricks notebooks are saved separately under `adf/` and `notebooks/`. Databricks job definitions are not yet included. The access connector, storage role assignments, and Unity Catalog storage credentials/external locations were configured separately and are not yet managed by this Terraform configuration. The Python/dbt pipeline still connects directly to PostgreSQL.
 
 ## Project structure
 
@@ -238,6 +256,8 @@ car-rental-data-platform/
 |-- .github/workflows/        # CI and deployment
 |-- docker-compose.yml       # Local PostgreSQL 15
 |-- requirements.txt         # Python, dbt, and test dependencies
+|-- adf/                     # ADF ARM export and example parameters
+|-- notebooks/               # Databricks raw-to-curated notebooks
 |-- data/
 |   |-- generate_data.py     # UK rental sample data
 |   `-- sample_data.sql      # Manual office seed

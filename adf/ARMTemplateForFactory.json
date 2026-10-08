@@ -1,0 +1,395 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "factoryName": {
+      "type": "string",
+      "metadata": "Data Factory name",
+      "defaultValue": "adf-carrental-dev"
+    },
+    "ls_postgres_carrental_password": {
+      "type": "secureString",
+      "metadata": "Secure string for 'password' of 'ls_postgres_carrental'"
+    },
+    "AzureDataLakeStorage1_accountKey": {
+      "type": "secureString",
+      "metadata": "Secure string for 'accountKey' of 'AzureDataLakeStorage1'"
+    },
+    "ls_postgres_carrental_properties_typeProperties_server": {
+      "type": "string",
+      "defaultValue": "psql-carrental-dev.postgres.database.azure.com"
+    },
+    "ls_postgres_carrental_properties_typeProperties_database": {
+      "type": "string",
+      "defaultValue": "car_rental"
+    },
+    "ls_postgres_carrental_properties_typeProperties_username": {
+      "type": "string",
+      "defaultValue": "carrentaladmin"
+    },
+    "AzureDataLakeStorage1_properties_typeProperties_url": {
+      "type": "string",
+      "defaultValue": "https://stcarrentaldev.dfs.core.windows.net/"
+    }
+  },
+  "variables": {
+    "factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+  },
+  "resources": [
+    {
+      "name": "[concat(parameters('factoryName'), '/ls_postgres_carrental')]",
+      "type": "Microsoft.DataFactory/factories/linkedServices",
+      "apiVersion": "2018-06-01",
+      "properties": {
+        "annotations": [],
+        "type": "AzurePostgreSql",
+        "version": "2.0",
+        "typeProperties": {
+          "server": "[parameters('ls_postgres_carrental_properties_typeProperties_server')]",
+          "port": "5432",
+          "database": "[parameters('ls_postgres_carrental_properties_typeProperties_database')]",
+          "sslMode": 3,
+          "username": "[parameters('ls_postgres_carrental_properties_typeProperties_username')]",
+          "password": {
+            "type": "SecureString",
+            "value": "[parameters('ls_postgres_carrental_password')]"
+          },
+          "authenticationType": "Basic"
+        }
+      },
+      "dependsOn": []
+    },
+    {
+      "name": "[concat(parameters('factoryName'), '/AzureDataLakeStorage1')]",
+      "type": "Microsoft.DataFactory/factories/linkedServices",
+      "apiVersion": "2018-06-01",
+      "properties": {
+        "annotations": [],
+        "type": "AzureBlobFS",
+        "typeProperties": {
+          "url": "[parameters('AzureDataLakeStorage1_properties_typeProperties_url')]",
+          "accountKey": {
+            "type": "SecureString",
+            "value": "[parameters('AzureDataLakeStorage1_accountKey')]"
+          }
+        }
+      },
+      "dependsOn": []
+    },
+    {
+      "name": "[concat(parameters('factoryName'), '/pl_cars_to_raw')]",
+      "type": "Microsoft.DataFactory/factories/pipelines",
+      "apiVersion": "2018-06-01",
+      "properties": {
+        "activities": [
+          {
+            "name": "Copy data1",
+            "type": "Copy",
+            "dependsOn": [],
+            "policy": {
+              "timeout": "0.12:00:00",
+              "retry": 0,
+              "retryIntervalInSeconds": 30,
+              "secureOutput": false,
+              "secureInput": false
+            },
+            "userProperties": [],
+            "typeProperties": {
+              "source": {
+                "type": "AzurePostgreSqlSource",
+                "partitionOption": "None",
+                "queryTimeout": "02:00:00"
+              },
+              "sink": {
+                "type": "ParquetSink",
+                "storeSettings": {
+                  "type": "AzureBlobFSWriteSettings"
+                },
+                "formatSettings": {
+                  "type": "ParquetWriteSettings"
+                }
+              },
+              "enableStaging": false,
+              "translator": {
+                "type": "TabularTranslator",
+                "typeConversion": true,
+                "typeConversionSettings": {
+                  "allowDataTruncation": true,
+                  "treatBooleanAsNumber": false
+                }
+              }
+            },
+            "inputs": [
+              {
+                "referenceName": "AzurePostgreSqlTable1",
+                "type": "DatasetReference",
+                "parameters": {}
+              }
+            ],
+            "outputs": [
+              {
+                "referenceName": "ds_raw_cars",
+                "type": "DatasetReference",
+                "parameters": {}
+              }
+            ]
+          }
+        ],
+        "policy": {
+          "elapsedTimeMetric": {}
+        },
+        "annotations": []
+      },
+      "dependsOn": [
+        "[concat(variables('factoryId'), '/datasets/AzurePostgreSqlTable1')]",
+        "[concat(variables('factoryId'), '/datasets/ds_raw_cars')]"
+      ]
+    },
+    {
+      "name": "[concat(parameters('factoryName'), '/AzurePostgreSqlTable1')]",
+      "type": "Microsoft.DataFactory/factories/datasets",
+      "apiVersion": "2018-06-01",
+      "properties": {
+        "linkedServiceName": {
+          "referenceName": "ls_postgres_carrental",
+          "type": "LinkedServiceReference"
+        },
+        "annotations": [],
+        "type": "AzurePostgreSqlTable",
+        "schema": [
+          {
+            "name": "plate",
+            "type": "character varying",
+            "precision": 0,
+            "scale": 0
+          },
+          {
+            "name": "category",
+            "type": "character varying",
+            "precision": 0,
+            "scale": 0
+          },
+          {
+            "name": "model",
+            "type": "character varying",
+            "precision": 0,
+            "scale": 0
+          },
+          {
+            "name": "brand",
+            "type": "character varying",
+            "precision": 0,
+            "scale": 0
+          },
+          {
+            "name": "fuel",
+            "type": "character varying",
+            "precision": 0,
+            "scale": 0
+          },
+          {
+            "name": "registrationdate",
+            "type": "date",
+            "precision": 0,
+            "scale": 0
+          }
+        ],
+        "typeProperties": {
+          "schema": "staging",
+          "table": "cars"
+        }
+      },
+      "dependsOn": [
+        "[concat(variables('factoryId'), '/linkedServices/ls_postgres_carrental')]"
+      ]
+    },
+    {
+      "name": "[concat(parameters('factoryName'), '/ds_raw_cars')]",
+      "type": "Microsoft.DataFactory/factories/datasets",
+      "apiVersion": "2018-06-01",
+      "properties": {
+        "linkedServiceName": {
+          "referenceName": "AzureDataLakeStorage1",
+          "type": "LinkedServiceReference"
+        },
+        "annotations": [],
+        "type": "Parquet",
+        "typeProperties": {
+          "location": {
+            "type": "AzureBlobFSLocation",
+            "fileName": "CARS.parquet",
+            "folderPath": "cars",
+            "fileSystem": "raw"
+          },
+          "compressionCodec": "snappy"
+        },
+        "schema": []
+      },
+      "dependsOn": [
+        "[concat(variables('factoryId'), '/linkedServices/AzureDataLakeStorage1')]"
+      ]
+    },
+    {
+      "name": "[concat(parameters('factoryName'), '/ds_postgres_table')]",
+      "type": "Microsoft.DataFactory/factories/datasets",
+      "apiVersion": "2018-06-01",
+      "properties": {
+        "linkedServiceName": {
+          "referenceName": "ls_postgres_carrental",
+          "type": "LinkedServiceReference"
+        },
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "defaultValue": "cars"
+          }
+        },
+        "annotations": [],
+        "type": "AzurePostgreSqlTable",
+        "schema": [],
+        "typeProperties": {
+          "schema": "staging",
+          "table": {
+            "value": "@dataset().table_name",
+            "type": "Expression"
+          }
+        }
+      },
+      "dependsOn": [
+        "[concat(variables('factoryId'), '/linkedServices/ls_postgres_carrental')]"
+      ]
+    },
+    {
+      "name": "[concat(parameters('factoryName'), '/ds_raw_table')]",
+      "type": "Microsoft.DataFactory/factories/datasets",
+      "apiVersion": "2018-06-01",
+      "properties": {
+        "linkedServiceName": {
+          "referenceName": "AzureDataLakeStorage1",
+          "type": "LinkedServiceReference"
+        },
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "defaultValue": "cars"
+          }
+        },
+        "annotations": [],
+        "type": "Parquet",
+        "typeProperties": {
+          "location": {
+            "type": "AzureBlobFSLocation",
+            "fileName": {
+              "value": "@concat(toUpper(dataset().table_name), '.parquet')",
+              "type": "Expression"
+            },
+            "folderPath": {
+              "value": "@dataset().table_name",
+              "type": "Expression"
+            },
+            "fileSystem": "raw"
+          },
+          "compressionCodec": "snappy"
+        },
+        "schema": []
+      },
+      "dependsOn": [
+        "[concat(variables('factoryId'), '/linkedServices/AzureDataLakeStorage1')]"
+      ]
+    },
+    {
+      "name": "[concat(parameters('factoryName'), '/pl_all_tables_to_raw')]",
+      "type": "Microsoft.DataFactory/factories/pipelines",
+      "apiVersion": "2018-06-01",
+      "properties": {
+        "activities": [
+          {
+            "name": "ForEach1",
+            "type": "ForEach",
+            "dependsOn": [],
+            "userProperties": [],
+            "typeProperties": {
+              "items": {
+                "value": "@createArray('rental_offices', 'cars', 'have_optional', 'drivers', 'rentals', 'drive', 'insurances', 'payments')",
+                "type": "Expression"
+              },
+              "isSequential": true,
+              "activities": [
+                {
+                  "name": "Copy data1",
+                  "type": "Copy",
+                  "dependsOn": [],
+                  "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                  },
+                  "userProperties": [],
+                  "typeProperties": {
+                    "source": {
+                      "type": "AzurePostgreSqlSource",
+                      "partitionOption": "None",
+                      "queryTimeout": "02:00:00"
+                    },
+                    "sink": {
+                      "type": "ParquetSink",
+                      "storeSettings": {
+                        "type": "AzureBlobFSWriteSettings"
+                      },
+                      "formatSettings": {
+                        "type": "ParquetWriteSettings"
+                      }
+                    },
+                    "enableStaging": false,
+                    "translator": {
+                      "type": "TabularTranslator",
+                      "typeConversion": true,
+                      "typeConversionSettings": {
+                        "allowDataTruncation": true,
+                        "treatBooleanAsNumber": false
+                      }
+                    }
+                  },
+                  "inputs": [
+                    {
+                      "referenceName": "ds_postgres_table",
+                      "type": "DatasetReference",
+                      "parameters": {
+                        "table_name": {
+                          "value": "@item()",
+                          "type": "Expression"
+                        }
+                      }
+                    }
+                  ],
+                  "outputs": [
+                    {
+                      "referenceName": "ds_raw_table",
+                      "type": "DatasetReference",
+                      "parameters": {
+                        "table_name": {
+                          "value": "@item()",
+                          "type": "Expression"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "policy": {
+          "elapsedTimeMetric": {}
+        },
+        "annotations": []
+      },
+      "dependsOn": [
+        "[concat(variables('factoryId'), '/datasets/ds_postgres_table')]",
+        "[concat(variables('factoryId'), '/datasets/ds_raw_table')]"
+      ]
+    }
+  ]
+}

@@ -28,3 +28,7 @@ dbt_packages/
 
 #VSCode settings
 .vscode/
+
+# Original cloud exports and local deployment parameters
+/adf/*.zip
+/adf/ARMTemplateParametersForFactory.json
