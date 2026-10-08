@@ -4,8 +4,8 @@ with source as (
 
 select
 	plate,
-	pickupdate as pickup_date,
+	pickup_date,
 	amount,
 	discount,
-	paymentmode as payment_mode
+    payment_mode
 from source

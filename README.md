@@ -1,282 +1,183 @@
 # Car Rental Data Platform
 
-A data engineering portfolio project that simulates a UK car rental business, generates transactional data in PostgreSQL, and builds an analytical warehouse with dbt.
+A data engineering portfolio project that simulates a UK car rental business. Python generates transactional data in Azure PostgreSQL, Azure Data Factory copies it into ADLS Gen2, Databricks validates and curates it, and dbt builds an analytical warehouse in Databricks.
 
-The project includes a Python/dbt warehouse workflow and an Azure data lake workflow using Data Factory, ADLS Gen2, and Databricks. GitHub Actions validates the PostgreSQL/dbt workflow against an isolated database and includes a deployment workflow for a configured PostgreSQL target.
+The complete data path has been exercised manually. Scheduling and automated orchestration are still pending.
 
 ## Architecture
 
-### Azure data lake workflow
-
 ```mermaid
 flowchart LR
-    A[PostgreSQL: 8 staging tables] --> B[ADF: ForEach + Copy]
-    B --> C[ADLS raw: Parquet]
-    C --> D[Databricks: validate and standardise]
-    D --> E[ADLS curated: Delta]
-    E --> F[Unity Catalog: external tables]
+    A[Python + Faker] --> B[PostgreSQL: 8 staging tables]
+    B --> C[ADF: ForEach + Copy]
+    C --> D[ADLS raw: Parquet]
+    D --> E[Databricks: validate and standardise]
+    E --> F[ADLS curated: Delta / Unity Catalog]
+    F --> G[dbt on Databricks SQL]
+    G --> H[analytics: 8 staging models, 4 dimensions, 1 fact]
 ```
 
-The [ADF export](adf/README.md) copies all eight tables to `raw/<table>/<TABLE>.parquet`. The [Databricks notebooks](notebooks/README.md) validate keys, references, and rental dates, standardise column names, add a processing timestamp, write Delta tables, and register them in Unity Catalog.
+The [ADF export](adf/README.md) copies each table to `raw/<table>/<TABLE>.parquet`. The [Databricks notebooks](notebooks/README.md) validate keys, references, and rental dates, standardise column names, add `processed_at`, write Delta tables, and register them in Unity Catalog. dbt reads these tables from `curated` and builds all 13 models in `analytics`.
 
-ADF ingestion and notebook execution are currently run separately. The data lake workflow is not yet connected to the dbt warehouse workflow below; its warehouse target and automated orchestration remain to be implemented.
+ADLS stores the curated Delta files; Unity Catalog registers them and Databricks provides the compute. The warehouse now uses Databricks SQL, replacing the earlier PostgreSQL/dbt target.
 
-### PostgreSQL/dbt workflow
+## Current status
 
-```mermaid
-flowchart TD
-    A[Python + Faker: UK rental data] --> B[PostgreSQL staging schema: 8 source tables]
-    B --> C[dbt: 8 stg_ models]
-    C --> D[dbt: 4 dimensions + fact_rental]
-    D --> E[PostgreSQL warehouse schema]
-```
+Verified during the development session on 2026-10-08:
 
-`python -m etl.main` creates the `staging` and `warehouse` schemas, generates sample data, and runs `dbt run`. dbt manages transformation dependencies through `source()` and `ref()`.
+- All eight ADF table copies succeeded and their raw files were inspected.
+- Raw-to-curated key, relationship, date, and row count checks passed.
+- All 13 dbt models built successfully in stages on Databricks.
+- The user reported successful fact model tests and manual checks: 200 source rentals, 200 fact rows, no duplicate rental keys, and no missing or invalid rental dates.
 
-With the profile shown below, all 13 dbt models are materialised as tables in `warehouse`. The models under `models/staging/` standardise source column names; the raw source tables remain in the separate `staging` schema.
+ADF, the notebooks, and dbt are run separately. The existing GitHub Actions workflows still configure PostgreSQL and are not compatible with the migrated dbt models. Updating CI, deployment, and orchestration is remaining work; the current Azure workflow is not an automated deployment.
 
 ## Technology
 
 | Component | Technology |
 | --- | --- |
 | Sample data | Python, Faker with `en_GB` locale |
+| Transactional source | Azure PostgreSQL 16; PostgreSQL 15 for local Python tests |
 | Database access | SQLAlchemy, psycopg2, python-dotenv |
-| Local and CI database | PostgreSQL 15 |
-| Transformations | dbt-postgres |
-| Data lake transformations | Databricks, PySpark, Delta Lake, Unity Catalog |
-| Data extraction utility | pandas |
-| Validation and automation | pytest, dbt tests, GitHub Actions |
-| Azure infrastructure definitions | Terraform, AzureRM provider, ADLS Gen2, PostgreSQL 16, Data Factory, Databricks |
+| Ingestion | Azure Data Factory |
+| Storage | ADLS Gen2, Parquet, Delta Lake |
+| Curation | Databricks, PySpark, Unity Catalog |
+| Warehouse | dbt-core 1.12.4, dbt-databricks 1.12.6, Databricks SQL |
+| Infrastructure | Terraform, AzureRM provider |
 
-## Run locally
+## Run the Azure workflow
 
-Use Python 3.12, matching CI, and Docker Compose for the local PostgreSQL database. Run commands from the repository root unless stated otherwise.
-
-### 1. Install dependencies
+Use Python 3.12 and run terminal commands from the repository root. For Windows Git Bash:
 
 ```bash
-git clone https://github.com/IIsmail15/car-rental-data-platform.git
-cd car-rental-data-platform
 python -m venv .venv
-```
-
-Activate the environment:
-
-```powershell
-# Windows PowerShell
-.\.venv\Scripts\Activate.ps1
-```
-
-```bash
-# macOS / Linux
-source .venv/bin/activate
-```
-
-Then install the Python dependencies, including dbt and pytest:
-
-```bash
+source .venv/Scripts/activate
 python -m pip install -r requirements.txt
+python -m pip install -r requirements-databricks.txt
 ```
 
-### 2. Start PostgreSQL and configure Python
+On macOS/Linux, activate with `source .venv/bin/activate`; in PowerShell use `.\.venv\Scripts\Activate.ps1`. `requirements.txt` still includes the old PostgreSQL adapter for the legacy workflow; the additional requirements file pins the dbt versions used in the successful Databricks session.
+
+### 1. Populate PostgreSQL when needed
+
+Copy [.env.example](.env.example) to `.env` and set `DATABASE_URL` to the PostgreSQL source connection string. Keep credentials out of Git. Python loads `.env`; standalone dbt uses its own connection profile.
+
+```bash
+python -m etl.setup_db
+python -m data.generate_data
+```
+
+Skip generation when the source is already populated. Repeated generation adds random data; it does not reset or reproduce a fixed dataset. `etl.main` still invokes the old PostgreSQL/dbt workflow and is not the entry point for this Azure sequence.
+
+### 2. Copy all eight tables with ADF
+
+Run the published `pl_all_tables_to_raw` pipeline and check that every copy succeeds. See [ADF setup and export notes](adf/README.md). The saved generic sink dataset has an empty schema; the exported live dataset originally had cars-only columns. Clear that schema in the live dataset and publish if this correction has not yet been applied.
+
+### 3. Validate and curate in Databricks
+
+Run [02_all_tables_raw_to_curated.ipynb](notebooks/02_all_tables_raw_to_curated.ipynb) from top to bottom. It validates the source data, overwrites eight curated Delta tables, verifies counts, and registers the external tables. Required access connector, storage permissions, and external locations are described in [notebooks/README.md](notebooks/README.md).
+
+The notebook refreshes tables individually, so a failed run can leave only some tables refreshed. Confirm the whole notebook succeeded before running dbt. `01_cars_raw_to_curated.ipynb` is the introductory walkthrough; it is not an additional required stage.
+
+### 4. Connect dbt and build the warehouse
+
+For initial setup, copy the credential-free example; preserve an existing working profile:
+
+```bash
+cp car_rental_dbt/databricks/profiles.example.yml car_rental_dbt/databricks/profiles.yml
+dbt debug --project-dir car_rental_dbt --profiles-dir car_rental_dbt/databricks
+dbt build --project-dir car_rental_dbt --profiles-dir car_rental_dbt/databricks --exclude rental_dates_are_valid
+```
+
+OAuth opens a browser for sign-in. The profile selects the development SQL warehouse, catalog `dbw_carrental_dev_7405614156846449`, and output schema `analytics`. [sources.yml](car_rental_dbt/models/staging/sources.yml) independently selects the input catalog and `curated` schema. Update both for another environment.
+
+The command excludes the empty date-test placeholder; the date check is currently manual. See the [dbt README](car_rental_dbt/README.md) for model behavior, partial runs, and SQL checks for row counts, duplicate rentals, and dates. The SQL warehouse must be available; stop idle compute when finished.
+
+## Data model
+
+| PostgreSQL source table | Purpose |
+| --- | --- |
+| `rental_offices` | UK pickup and dropoff locations |
+| `cars` | Vehicle identity and attributes |
+| `have_optional` | Optional features associated with cars |
+| `drivers` | Driver identity and licence details |
+| `rentals` | Rental dates, locations, and mileage |
+| `drive` | Driver assignments to rentals |
+| `insurances` | Risk level and cost per rental |
+| `payments` | Amount, discount, and payment mode |
+
+| Warehouse model | Purpose |
+| --- | --- |
+| `stg_*` (8) | Select standardized curated columns |
+| `dim_car` | Car attributes and aggregated optional features |
+| `dim_driver` | Driver attributes keyed by `licensenumber` |
+| `dim_office` | Office attributes keyed by `officename` |
+| `dim_date` | Distinct pickup dates and calendar attributes |
+| `fact_rental` | Rental measures and dimension references |
+
+The intended fact grain is one row per `(car_plate, pickup_date)`. Insurance costs are summed before joining. For multiple drivers, the model selects the lowest `license_number` using `row_number()`; this is a repeatable selection, not a primary-driver designation. Pickup and dropoff offices share `dim_office`. `dim_date` contains pickup dates only; `dropoff_date` remains on the fact table.
+
+Initial generator defaults are 5 offices, 50 cars, 40 drivers, 200 rentals, 200 driver assignments, 200 payments, and 1-2 insurance records per rental. Optional features and other generated values vary.
+
+## Tests
+
+dbt's model tests check required dimension references, relationships, and accepted payment modes. Rental row count, uniqueness, and date checks were run manually; their SQL is in the [dbt README](car_rental_dbt/README.md). The singular test file `car_rental_dbt/tests/rental_dates_are_valid.sql` is still an empty placeholder.
+
+Python tests cover the PostgreSQL source and generator. **Their fixture deletes source rows before each test. Use a dedicated test database.** For local tests, Docker Compose provides PostgreSQL 15:
 
 ```bash
 docker compose up -d
 docker compose exec postgres pg_isready -U postgres -d car_rental
-```
-
-Wait until PostgreSQL reports that it is accepting connections. Compose exposes port `5432`, creates the `car_rental` database, and persists data in the `postgres_data` volume.
-
-Copy [`.env.example`](.env.example) to `.env`:
-
-```powershell
-# Windows PowerShell
-Copy-Item .env.example .env
-```
-
-```bash
-# macOS / Linux
-cp .env.example .env
-```
-
-The template matches the local Compose database:
-
-```dotenv
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/car_rental
-```
-
-To use an existing PostgreSQL database, skip Docker and set `DATABASE_URL` to its connection string. For Neon, use your Neon connection string with `sslmode=require`. Configure dbt to use the same database in the next step.
-
-### 3. Configure dbt
-
-Create `~/.dbt/profiles.yml` (`$HOME\.dbt\profiles.yml` on Windows), creating the `.dbt` directory if needed. Add this profile for the local Compose database:
-
-```yaml
-car_rental_dbt:
-  target: dev
-  outputs:
-    dev:
-      type: postgres
-      host: localhost
-      user: postgres
-      password: postgres
-      port: 5432
-      dbname: car_rental
-      schema: warehouse
-      threads: 1
-```
-
-For a remote database, replace the connection fields and set `sslmode: require` when required by the host. Keep credentials out of version control. Python loads `.env`; a standalone dbt command reads its profile and does not load `.env` automatically.
-
-### 4. Build and validate the warehouse
-
-```bash
-dbt debug --project-dir car_rental_dbt
-python -m etl.main
-dbt test --project-dir car_rental_dbt
-```
-
-The pipeline command runs these steps:
-
-1. Creates missing schemas and the eight source tables.
-2. Generates offices, cars, optional features, drivers, rentals, driver assignments, insurance records, and payments.
-3. Runs all dbt models to rebuild the transformed tables.
-
-Tests are a separate step; `etl.main` does not run them. Repeated pipeline runs add random source data and can add assignments or features to existing records. They do not reset the database or reproduce a fixed dataset.
-
-To rebuild and test the models using existing source data:
-
-```bash
-dbt build --project-dir car_rental_dbt
-```
-
-## Data model
-
-### Source tables
-
-| Table in `staging` | Purpose |
-| --- | --- |
-| `rental_offices` | UK pickup and dropoff locations |
-| `cars` | Vehicle plate, category, model, brand, fuel, and registration date |
-| `have_optional` | Optional features associated with each car |
-| `drivers` | Driver identity and licence details |
-| `rentals` | Rental dates, locations, and mileage; keyed by `(plate, pickupdate)` |
-| `drive` | Driver assignments to rentals |
-| `insurances` | Risk level and cost per rental |
-| `payments` | Amount, discount, and payment mode per rental |
-
-### Warehouse models
-
-| Model | Purpose |
-| --- | --- |
-| `stg_*` (8 models) | Select source fields and standardise column names |
-| `dim_car` | Vehicle attributes with optional features combined using `string_agg` |
-| `dim_driver` | Driver attributes keyed by `licensenumber` |
-| `dim_office` | Office attributes keyed by `officename` |
-| `dim_date` | Distinct pickup dates with calendar attributes |
-| `fact_rental` | Rental measures joined to cars, drivers, offices, dates, payments, and aggregated insurance costs |
-
-The fact table has one row per rental, identified by `(car_plate, pickup_date)`, and uses natural keys: car plate, driver licence, office name, and date. Pickup and dropoff offices both reference `dim_office`. `dim_date` covers pickup dates only; `dropoff_date` remains a date column on the fact table.
-
-Insurance costs are summed per rental before joining. If a rental has multiple driver assignments, the current model selects one with `DISTINCT ON`; without an ordering rule, the selected driver is not deterministic.
-
-### Sample data
-
-Defaults for a first run against an empty database:
-
-| Entity | Count |
-| --- | --- |
-| Rental offices | 5 |
-| Cars | 50 |
-| Drivers | 40 |
-| Rentals | 200 |
-| Driver assignments | 200 |
-| Insurance records | 200-400 (1-2 per rental) |
-| Payments | 200 |
-
-Optional features are assigned randomly to approximately 60% of cars. Generated values and totals on subsequent runs vary.
-
-## Tests
-
-Python tests cover database connectivity, data generation, and source data checks. **Their fixture deletes all rows from the eight staging tables before each test. Use a dedicated test database.**
-
-For the local Compose service, create it once:
-
-```bash
 docker compose exec postgres createdb -U postgres car_rental_test
 ```
 
-Create `.env.test` in the repository root:
+Wait for readiness, and create the test database only once. Set `.env.test` to:
 
 ```dotenv
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/car_rental_test
 ```
 
-An existing shell `DATABASE_URL` takes precedence over `.env.test`; ensure it is unset or points to the test database before running:
+An existing shell `DATABASE_URL` takes precedence over `.env.test`; ensure it is unset or targets the test database, then run `python -m pytest -q`. These tests do not validate the live Databricks warehouse.
 
-```bash
-python -m pytest -q
-```
+## CI and deployment: migration pending
 
-The configured dbt tests check non-null dimension references, relationships to car/driver/office dimensions, and accepted payment modes. The file `car_rental_dbt/tests/rental_dates_are_valid.sql` is currently empty, so it does not implement a dbt date check.
+[ci.yml](.github/workflows/ci.yml) currently runs Python tests and the previous PostgreSQL/dbt pipeline on pushes to `main` and pull requests. Its dbt steps need migration for the current SQL and curated sources.
 
-## CI and deployment
+[deploy.yml](.github/workflows/deploy.yml) currently runs manually or after successful CI on `main`. It uses PostgreSQL secrets and calls `etl.main`, including source data generation. It does not deploy the Databricks workflow. Update these workflows and choose unattended authentication before relying on them for this warehouse.
 
-[`ci.yml`](.github/workflows/ci.yml) runs on pushes to `main` and pull requests targeting `main`. It uses Python 3.12 and an isolated PostgreSQL 15 service to run pytest, validate the dbt profile, execute the full pipeline, and run dbt tests.
-
-[`deploy.yml`](.github/workflows/deploy.yml) runs manually or after a successful `CI` workflow run on `main`. It uses the GitHub `production` environment and requires these secrets:
-
-| Secret | Used by |
-| --- | --- |
-| `DATABASE_URL` | Python setup and data generation |
-| `DB_HOST`, `DB_PORT`, `DB_NAME` | dbt connection |
-| `PGUSER`, `PGPASSWORD` | dbt authentication |
-
-Both connection configurations must identify the same database. Deployment requires SSL for dbt, runs the full pipeline (including sample data generation), and then runs dbt tests. Environment protection rules may require approval before the job starts.
+Remaining work includes automating the manual warehouse checks, migrating CI/deployment, and orchestrating ADF, Databricks curation, and dbt in sequence. Browser OAuth is currently used for interactive development.
 
 ## Azure infrastructure
 
-[`infra/terraform/`](infra/terraform/) defines:
+[infra/terraform/](infra/terraform/) defines a resource group, ADLS Gen2 account with `raw` and `curated` filesystems, PostgreSQL Flexible Server and database, Data Factory, and a Premium Databricks workspace. It requires Terraform `>= 1.6.0` and AzureRM `~> 4.0`; defaults are Sweden Central, project `carrental`, and environment `dev`.
 
-- An Azure resource group.
-- An ADLS Gen2 storage account with `raw` and `curated` filesystems.
-- A PostgreSQL 16 Flexible Server and `car_rental` database.
-- An Azure Data Factory instance.
-- A Premium Azure Databricks workspace.
-
-The configuration requires Terraform `>= 1.6.0` and AzureRM `~> 4.0`. Defaults are `Sweden Central`, project name `carrental`, and environment `dev`; required PostgreSQL administrator values are shown in [`terraform.tfvars.example`](infra/terraform/terraform.tfvars.example).
-
-The ADF child resources and Databricks notebooks are saved separately under `adf/` and `notebooks/`. Databricks job definitions are not yet included. The access connector, storage role assignments, and Unity Catalog storage credentials/external locations were configured separately and are not yet managed by this Terraform configuration. The Python/dbt pipeline still connects directly to PostgreSQL.
+The access connector, storage role assignments, and Unity Catalog storage credentials/external locations were configured separately and are not yet managed by Terraform. ADF child resources and notebook exports are stored in this repository; Databricks job definitions are not yet included.
 
 ## Project structure
 
 ```text
 car-rental-data-platform/
-|-- .env.example              # Python connection template
-|-- .github/workflows/        # CI and deployment
-|-- docker-compose.yml       # Local PostgreSQL 15
-|-- requirements.txt         # Python, dbt, and test dependencies
-|-- adf/                     # ADF ARM export and example parameters
+|-- .env.example              # PostgreSQL source connection template
+|-- .github/workflows/        # Legacy PostgreSQL CI/deployment; migration pending
+|-- docker-compose.yml       # Local PostgreSQL for source development/tests
+|-- requirements.txt         # Python and legacy PostgreSQL dbt dependencies
+|-- requirements-databricks.txt # Verified Databricks dbt versions
+|-- adf/                     # ADF export and setup notes
 |-- notebooks/               # Databricks raw-to-curated notebooks
-|-- data/
-|   |-- generate_data.py     # UK rental sample data
-|   `-- sample_data.sql      # Manual office seed
-|-- etl/
-|   |-- connect.py           # SQLAlchemy engine
-|   |-- setup_db.py          # Schemas and source tables
-|   |-- extract.py           # Standalone pandas extraction utility
-|   `-- main.py              # Setup, generation, and dbt orchestration
-|-- init/                    # Docker init SQL and legacy schema comments
+|-- data/                    # Sample data generator
+|-- etl/                     # PostgreSQL setup and extraction utilities
+|-- init/                    # Source SQL and legacy warehouse schema
 |-- car_rental_dbt/
-|   |-- dbt_project.yml
-|   |-- models/staging/      # Source declarations and 8 staging models
-|   |-- models/warehouse/    # 4 dimensions, fact table, and model tests
-|   `-- tests/               # Singular SQL tests
-|-- tests/                   # Python database tests
-`-- infra/terraform/         # Azure infrastructure definitions
+|   |-- databricks/          # Example and ignored local connection profile
+|   |-- models/staging/     # Curated source declarations and 8 staging models
+|   |-- models/warehouse/   # 4 dimensions, fact table, and model tests
+|   `-- tests/              # Singular SQL test placeholder
+|-- tests/                  # Python database tests
+`-- infra/terraform/        # Azure infrastructure definitions
 ```
 
 ## Author
 
-**Israa** — MSc Data Science & Business Analytics, Bologna Business School  
+**Israa** - MSc Data Science & Business Analytics, Bologna Business School
+
 [GitHub](https://github.com/IIsmail15)

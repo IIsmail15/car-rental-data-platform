@@ -18,11 +18,15 @@ insurances as (
 ),
 
 drive as (
-    select distinct on (plate, pickup_date)
+    select
         plate,
         pickup_date,
         license_number
     from {{ ref('stg_drive') }}
+    qualify row_number() over (
+        partition by plate, pickup_date
+        order by license_number
+    ) = 1
 ),
 
 dim_car as (

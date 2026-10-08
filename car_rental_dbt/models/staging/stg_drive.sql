@@ -3,7 +3,7 @@ with source as (
 )
 
 select
-  licensenumber as license_number,
+  license_number,
   plate,
-  pickupdate as pickup_date
+  pickup_date
 from source

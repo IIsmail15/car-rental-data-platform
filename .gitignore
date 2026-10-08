@@ -1,6 +1,8 @@
 # .gitignore
 # dbt profiles
 car_rental_dbt/profiles.yml
+car_rental_dbt/databricks/profiles.yml
+**/.user.yml
 *.dbtprofiles.yml
 .dbtprofiles.yml
 .CUsersIIsra.dbtprofiles.yml

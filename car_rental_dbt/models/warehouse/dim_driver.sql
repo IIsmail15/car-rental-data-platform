@@ -8,5 +8,5 @@ select
     license_number as licensenumber,
     license_expiration as licenseexpiration,
     driver_name as drivername,
-    birthdate
+    birth_date as birthdate
 from drivers

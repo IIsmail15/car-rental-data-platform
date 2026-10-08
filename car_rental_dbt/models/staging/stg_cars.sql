@@ -8,5 +8,5 @@ select
     model,
     brand,
     fuel,
-    registrationdate as registration_date
+    registration_date
 from source

@@ -7,12 +7,11 @@ with rental_dates as (
 
 select
     date_value,
-    extract(year from date_value)::int        as year,
-    extract(month from date_value)::int       as month,
-    extract(day from date_value)::int         as day,
-    extract(dow from date_value)::int         as weekday,
-    extract(quarter from date_value)::int     as quarter,
-    extract(week from date_value)::int        as week_of_year,
-    case when extract(dow from date_value) in (0, 6) 
-         then true else false end             as is_weekend
+    year(date_value) as year,
+    month(date_value) as month,
+    dayofmonth(date_value) as day,
+    dayofweek(date_value) - 1 as weekday,
+    quarter(date_value) as quarter,
+    weekofyear(date_value) as week_of_year,
+    dayofweek(date_value) in (1, 7) as is_weekend
 from rental_dates

@@ -2,7 +2,8 @@ version: 2
 
 sources:
   - name: staging
-    schema: staging
+    database: dbw_carrental_dev_7405614156846449
+    schema: curated
     tables:
       - name: cars
       - name: have_optional

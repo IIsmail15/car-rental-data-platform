@@ -4,9 +4,9 @@ with source as (
 
 select
 	plate,
-	pickupdate as pickup_date,
-	dropoffdate as dropoff_date,
-	pickupplace as pickup_place,
-	dropoffplace as dropoff_place,
+	pickup_date,
+	dropoff_date,
+	pickup_place,
+	dropoff_place,
 	miles
 from source

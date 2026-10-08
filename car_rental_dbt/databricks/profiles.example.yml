@@ -1,0 +1,11 @@
+car_rental_dbt:
+  target: databricks_dev
+  outputs:
+    databricks_dev:
+      type: databricks
+      host: adb-7405614156846449.9.azuredatabricks.net
+      http_path: /sql/1.0/warehouses/3a42db489d006de3
+      catalog: dbw_carrental_dev_7405614156846449
+      schema: analytics
+      auth_type: oauth
+      threads: 1

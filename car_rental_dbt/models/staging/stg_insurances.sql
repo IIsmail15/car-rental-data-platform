@@ -5,6 +5,6 @@ with source as (
 select
 	risk,
 	plate,
-	pickupdate as pickup_date,
+	pickup_date,
 	cost
 from source

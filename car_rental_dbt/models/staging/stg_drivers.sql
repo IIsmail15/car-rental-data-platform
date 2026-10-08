@@ -3,8 +3,8 @@ with source as (
 )
 
 select
-    licensenumber as license_number,
-    licenseexpiration as license_expiration,
-    drivername as driver_name,
-    birthdate
+    license_number,
+    license_expiration,
+    driver_name,
+    birth_date
 from source

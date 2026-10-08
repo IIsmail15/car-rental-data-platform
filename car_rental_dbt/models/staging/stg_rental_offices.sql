@@ -3,7 +3,7 @@ with source as (
 )
 
 select
-	officename as office_name,
+	office_name,
 	city,
 	area,
 	state,
