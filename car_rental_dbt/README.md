@@ -21,10 +21,10 @@ The source's logical name remains `staging`, so existing `source('staging', ...)
 Build models and run their configured tests:
 
 ```bash
-dbt build --project-dir car_rental_dbt --profiles-dir car_rental_dbt/databricks --exclude rental_dates_are_valid
+dbt build --project-dir car_rental_dbt --profiles-dir car_rental_dbt/databricks
 ```
 
-The command excludes the empty date-test placeholder; perform the manual date check below until that test is implemented. For an individual model during development, use `dbt run`:
+For an individual model during development, use `dbt run`:
 
 ```bash
 dbt run --project-dir car_rental_dbt --profiles-dir car_rental_dbt/databricks --select dim_date
@@ -45,9 +45,25 @@ dbt run --project-dir car_rental_dbt --profiles-dir car_rental_dbt/databricks --
 
 The development session on 2026-10-08 successfully built all 13 models in stages. The user reported that the fact model's configured tests passed and confirmed the following manual SQL checks: 200 staging rentals, 200 fact rows, no duplicate rental keys, and no missing or invalid rental dates. These are results for that sample dataset, not assertions about future runs.
 
-[schema.yml](models/warehouse/schema.yml) defines nine tests for required dimension references, relationships, and accepted payment modes. [rental_dates_are_valid.sql](tests/rental_dates_are_valid.sql) is an empty placeholder and does not implement a date test. Row count, rental uniqueness, and date checks below are currently manual.
+[schema.yml](models/warehouse/schema.yml) defines nine tests for required dimension references, relationships, and accepted payment modes. Three singular SQL tests automate the checks previously performed manually, for a total of 12 data tests:
 
-Run in the Databricks SQL Editor after building:
+| Test | Fails when |
+| --- | --- |
+| [rental_dates_are_valid](tests/rental_dates_are_valid.sql) | A pickup/dropoff date is missing, or dropoff is not after pickup |
+| [rental_keys_are_unique](tests/rental_keys_are_unique.sql) | More than one fact row has the same car plate and pickup date |
+| [rental_fact_matches_source_count](tests/rental_fact_matches_source_count.sql) | Fact row count differs from the current staging rental count |
+
+Each test returns failing rows; zero returned rows means a pass. The count comparison adjusts to the current dataset rather than expecting 200. Matching counts alone do not prove that every rental key matches; the test also permits an empty source and empty fact table.
+
+Run all 12 tests against the existing tables without rebuilding models:
+
+```bash
+dbt test --project-dir car_rental_dbt --profiles-dir car_rental_dbt/databricks
+```
+
+The subsequent live run of this command passed all 12 tests. Saved `run_results.json` recorded 12 passes at 2026-10-08 22:09 UTC, including zero failures in each of the three new singular tests. Local validation also checked the SQL against isolated valid, duplicate, missing-row, extra-row, null-date, equal-date, and reversed-date examples before the live run.
+
+The equivalent manual checks remain useful in the Databricks SQL Editor after building:
 
 ```sql
 USE CATALOG dbw_carrental_dev_7405614156846449;

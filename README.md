@@ -29,6 +29,7 @@ Verified during the development session on 2026-10-08:
 - Raw-to-curated key, relationship, date, and row count checks passed.
 - All 13 dbt models built successfully in stages on Databricks.
 - The user reported successful fact model tests and manual checks: 200 source rentals, 200 fact rows, no duplicate rental keys, and no missing or invalid rental dates.
+- The subsequent Databricks `dbt test` run passed all 12 data tests, including the three newly automated rental checks (saved run results: 2026-10-08 22:09 UTC).
 
 ADF, the notebooks, and dbt are run separately. The existing GitHub Actions workflows still configure PostgreSQL and are not compatible with the migrated dbt models. Updating CI, deployment, and orchestration is remaining work; the current Azure workflow is not an automated deployment.
 
@@ -86,12 +87,12 @@ For initial setup, copy the credential-free example; preserve an existing workin
 ```bash
 cp car_rental_dbt/databricks/profiles.example.yml car_rental_dbt/databricks/profiles.yml
 dbt debug --project-dir car_rental_dbt --profiles-dir car_rental_dbt/databricks
-dbt build --project-dir car_rental_dbt --profiles-dir car_rental_dbt/databricks --exclude rental_dates_are_valid
+dbt build --project-dir car_rental_dbt --profiles-dir car_rental_dbt/databricks
 ```
 
 OAuth opens a browser for sign-in. The profile selects the development SQL warehouse, catalog `dbw_carrental_dev_7405614156846449`, and output schema `analytics`. [sources.yml](car_rental_dbt/models/staging/sources.yml) independently selects the input catalog and `curated` schema. Update both for another environment.
 
-The command excludes the empty date-test placeholder; the date check is currently manual. See the [dbt README](car_rental_dbt/README.md) for model behavior, partial runs, and SQL checks for row counts, duplicate rentals, and dates. The SQL warehouse must be available; stop idle compute when finished.
+See the [dbt README](car_rental_dbt/README.md) for model behavior, partial runs, and automated tests for row counts, duplicate rentals, and dates. The SQL warehouse must be available; stop idle compute when finished.
 
 ## Data model
 
@@ -121,7 +122,7 @@ Initial generator defaults are 5 offices, 50 cars, 40 drivers, 200 rentals, 200 
 
 ## Tests
 
-dbt's model tests check required dimension references, relationships, and accepted payment modes. Rental row count, uniqueness, and date checks were run manually; their SQL is in the [dbt README](car_rental_dbt/README.md). The singular test file `car_rental_dbt/tests/rental_dates_are_valid.sql` is still an empty placeholder.
+dbt has 12 data tests: nine model tests for required dimension references, relationships, and accepted payment modes, plus three singular SQL tests for rental row count, uniqueness, and valid dates. All 12 passed against the Databricks warehouse on 2026-10-08. Run them against existing tables with `dbt test --project-dir car_rental_dbt --profiles-dir car_rental_dbt/databricks`. See the [dbt README](car_rental_dbt/README.md) for the test definitions and equivalent manual SQL.
 
 Python tests cover the PostgreSQL source and generator. **Their fixture deletes source rows before each test. Use a dedicated test database.** For local tests, Docker Compose provides PostgreSQL 15:
 
@@ -145,7 +146,7 @@ An existing shell `DATABASE_URL` takes precedence over `.env.test`; ensure it is
 
 [deploy.yml](.github/workflows/deploy.yml) currently runs manually or after successful CI on `main`. It uses PostgreSQL secrets and calls `etl.main`, including source data generation. It does not deploy the Databricks workflow. Update these workflows and choose unattended authentication before relying on them for this warehouse.
 
-Remaining work includes automating the manual warehouse checks, migrating CI/deployment, and orchestrating ADF, Databricks curation, and dbt in sequence. Browser OAuth is currently used for interactive development.
+Remaining work includes migrating CI/deployment and orchestrating ADF, Databricks curation, and dbt in sequence. Browser OAuth is currently used for interactive development.
 
 ## Azure infrastructure
 
@@ -171,7 +172,7 @@ car-rental-data-platform/
 |   |-- databricks/          # Example and ignored local connection profile
 |   |-- models/staging/     # Curated source declarations and 8 staging models
 |   |-- models/warehouse/   # 4 dimensions, fact table, and model tests
-|   `-- tests/              # Singular SQL test placeholder
+|   `-- tests/              # Rental dates, uniqueness, and row count tests
 |-- tests/                  # Python database tests
 `-- infra/terraform/        # Azure infrastructure definitions
 ```
