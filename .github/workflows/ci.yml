@@ -31,7 +31,7 @@ jobs:
           --health-retries=5
 
     env:
-      DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/car_rental_test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/car_rental_test
 
     steps:
       - name: Check out repository
