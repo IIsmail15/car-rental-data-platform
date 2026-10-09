@@ -31,7 +31,7 @@ Verified during the development session on 2026-10-08:
 - The user reported successful fact model tests and manual checks: 200 source rentals, 200 fact rows, no duplicate rental keys, and no missing or invalid rental dates.
 - The subsequent Databricks `dbt test` run passed all 12 data tests, including the three newly automated rental checks (saved run results: 2026-10-08 22:09 UTC).
 
-ADF, the notebooks, and dbt are run separately. The existing GitHub Actions workflows still configure PostgreSQL and are not compatible with the migrated dbt models. Updating CI, deployment, and orchestration is remaining work; the current Azure workflow is not an automated deployment.
+ADF, the notebooks, and dbt are run separately. CI checks the Python source code against a temporary PostgreSQL database and parses the Databricks dbt project without connecting to Azure. Automated deployment and pipeline orchestration remain pending.
 
 ## Technology
 
@@ -57,7 +57,7 @@ python -m pip install -r requirements.txt
 python -m pip install -r requirements-databricks.txt
 ```
 
-On macOS/Linux, activate with `source .venv/bin/activate`; in PowerShell use `.\.venv\Scripts\Activate.ps1`. `requirements.txt` still includes the old PostgreSQL adapter for the legacy workflow; the additional requirements file pins the dbt versions used in the successful Databricks session.
+On macOS/Linux, activate with `source .venv/bin/activate`; in PowerShell use `.\.venv\Scripts\Activate.ps1`. `requirements.txt` contains Python source and test dependencies. `requirements-databricks.txt` contains the pinned dbt and Databricks adapter versions.
 
 ### 1. Populate PostgreSQL when needed
 
@@ -72,7 +72,7 @@ Skip generation when the source is already populated. Repeated generation adds r
 
 ### 2. Copy all eight tables with ADF
 
-Run the published `pl_all_tables_to_raw` pipeline and check that every copy succeeds. See [ADF setup and export notes](adf/README.md). The saved generic sink dataset has an empty schema; the exported live dataset originally had cars-only columns. Clear that schema in the live dataset and publish if this correction has not yet been applied.
+Run the published `pl_all_tables_to_raw` pipeline and check that every copy succeeds. See [ADF, the notebooks, and dbt are run separately.DF setup and export notes](adf/README.md). The saved generic sink dataset has an empty schema; the exported live dataset originally had cars-only columns. Clear that schema in the live dataset and publish if this correction has not yet been applied.
 
 ### 3. Validate and curate in Databricks
 
@@ -140,13 +140,20 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/car_rental_test
 
 An existing shell `DATABASE_URL` takes precedence over `.env.test`; ensure it is unset or targets the test database, then run `python -m pytest -q`. These tests do not validate the live Databricks warehouse.
 
-## CI and deployment: migration pending
+## CI and deployment
 
-[ci.yml](.github/workflows/ci.yml) currently runs Python tests and the previous PostgreSQL/dbt pipeline on pushes to `main` and pull requests. Its dbt steps need migration for the current SQL and curated sources.
+[ci.yml](.github/workflows/ci.yml) runs on pushes to `main`, pull requests targeting `main`, and manual dispatches.
 
-[deploy.yml](.github/workflows/deploy.yml) currently runs manually or after successful CI on `main`. It uses PostgreSQL secrets and calls `etl.main`, including source data generation. It does not deploy the Databricks workflow. Update these workflows and choose unattended authentication before relying on them for this warehouse.
+It contains two independent jobs:
 
-Remaining work includes migrating CI/deployment and orchestrating ADF, Databricks curation, and dbt in sequence. Browser OAuth is currently used for interactive development.
+- `test`: runs Python tests against a disposable PostgreSQL 15 service.
+- `dbt-parse`: installs the Databricks adapter and parses the dbt project using the placeholder profile in `.github/dbt/profiles.yml`.
+
+Neither job connects to Azure. Parsing checks project configuration and references; it does not execute warehouse SQL or run the 12 data tests.
+
+The old PostgreSQL deployment workflow has been removed. Successful CI no longer launches that deployment.
+
+Unattended authentication, deployment, and orchestration of ADF, Databricks curation, and dbt remain pending.
 
 ## Azure infrastructure
 
@@ -159,9 +166,9 @@ The access connector, storage role assignments, and Unity Catalog storage creden
 ```text
 car-rental-data-platform/
 |-- .env.example              # PostgreSQL source connection template
-|-- .github/workflows/        # Legacy PostgreSQL CI/deployment; migration pending
+|-- .github/workflows/        # Python tests and offline dbt parsing
 |-- docker-compose.yml       # Local PostgreSQL for source development/tests
-|-- requirements.txt         # Python and legacy PostgreSQL dbt dependencies
+|-- requirements.txt         # Python source and test dependencies
 |-- requirements-databricks.txt # Verified Databricks dbt versions
 |-- adf/                     # ADF export and setup notes
 |-- notebooks/               # Databricks raw-to-curated notebooks

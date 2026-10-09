@@ -1,0 +1,11 @@
+car_rental_dbt:
+  target: ci
+  outputs:
+    ci:
+      type: databricks
+      host: unused.invalid
+      http_path: /sql/1.0/warehouses/unused
+      catalog: ci_catalog
+      schema: analytics
+      auth_type: oauth
+      threads: 1

@@ -90,4 +90,6 @@ WHERE pickup_date IS NULL
 
 ## Pending automation
 
-ADF ingestion, notebook execution, and dbt are still separate manual stages. Browser OAuth is for development; unattended jobs need appropriate authentication. The existing GitHub Actions workflows and `etl.main` still target the previous PostgreSQL/dbt flow and need migration before they can run this warehouse. See the [root README](../README.md).
+CI parses this project with the Databricks adapter without connecting to a warehouse. The 12 data tests still require a live Databricks connection.
+
+ADF ingestion, notebook execution, and dbt remain separate manual stages. The old PostgreSQL deployment workflow has been removed. Unattended authentication and orchestration remain pending. `etl.main` is still a legacy entry point and should not run this Azure sequence.
