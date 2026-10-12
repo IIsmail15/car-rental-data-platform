@@ -88,8 +88,12 @@ WHERE pickup_date IS NULL
    OR dropoff_date <= pickup_date;
 ```
 
-## Pending automation
+## Automated execution
 
 CI parses this project with the Databricks adapter without connecting to a warehouse. The 12 data tests still require a live Databricks connection.
 
-ADF ingestion, notebook execution, and dbt remain separate manual stages. The old PostgreSQL deployment workflow has been removed. Unattended authentication and orchestration remain pending. `etl.main` is still a legacy entry point and should not run this Azure sequence.
+ADF now invokes `job_carrental_curated_warehouse` after all eight table copies succeed. Its `dbt_build` task runs `dbt build` after `raw_to_curated` succeeds, using project directory `car_rental_dbt` from Git branch `main`. The [saved job YAML](../databricks/job_carrental_curated_warehouse.yml) selects the development SQL warehouse, catalog, and `analytics` schema, with the same pinned dbt versions as local development. See the [job notes](../databricks/README.md) for execution settings and deployment prerequisites.
+
+The orchestrated run on 2026-10-09 completed 13 table models and 12 data tests in 14.96 seconds, reporting `PASS=25 WARN=0 ERROR=0 SKIP=0 NO-OP=0 REUSED=0 TOTAL=25`. This verifies execution through the cloud workflow; it is separate from CI's offline parse check.
+
+The old PostgreSQL deployment workflow has been removed. Automated deployment from GitHub remains pending. `etl.main` is still a legacy entry point and should not run this Azure sequence.

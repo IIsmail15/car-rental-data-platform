@@ -30,6 +30,21 @@
     "AzureDataLakeStorage1_properties_typeProperties_url": {
       "type": "string",
       "defaultValue": "https://stcarrentaldev.dfs.core.windows.net/"
+    },
+    "databricksJobId": {
+      "type": "string",
+      "defaultValue": "82774375581532",
+      "metadata": {
+        "description": "Existing Databricks job ID; the job must be created separately."
+      }
+    },
+    "AzureDatabricks1_properties_typeProperties_domain": {
+      "type": "string",
+      "defaultValue": "https://adb-7405614156846449.9.azuredatabricks.net"
+    },
+    "AzureDatabricks1_properties_typeProperties_workspaceResourceId": {
+      "type": "string",
+      "defaultValue": "/subscriptions/9cf46275-213b-4570-8f35-0d1652338c9a/resourceGroups/rg-carrental-dev/providers/Microsoft.Databricks/workspaces/dbw-carrental-dev"
     }
   },
   "variables": {
@@ -138,7 +153,8 @@
         "policy": {
           "elapsedTimeMetric": {}
         },
-        "annotations": []
+        "annotations": [],
+        "lastPublishTime": "2026-10-08T12:45:08Z"
       },
       "dependsOn": [
         "[concat(variables('factoryId'), '/datasets/AzurePostgreSqlTable1')]",
@@ -379,16 +395,99 @@
                 }
               ]
             }
+          },
+          {
+            "name": "run_databricks_workflow",
+            "type": "DatabricksJob",
+            "dependsOn": [
+              {
+                "activity": "ForEach1",
+                "dependencyConditions": [
+                  "Succeeded"
+                ]
+              }
+            ],
+            "policy": {
+              "timeout": "0.12:00:00",
+              "retry": 0,
+              "retryIntervalInSeconds": 30,
+              "secureOutput": false,
+              "secureInput": false
+            },
+            "userProperties": [],
+            "typeProperties": {
+              "jobId": "[parameters('databricksJobId')]"
+            },
+            "linkedServiceName": {
+              "referenceName": "AzureDatabricks1",
+              "type": "LinkedServiceReference"
+            }
           }
         ],
         "policy": {
           "elapsedTimeMetric": {}
         },
-        "annotations": []
+        "annotations": [],
+        "lastPublishTime": "2026-10-09T14:24:44Z"
       },
       "dependsOn": [
+        "[concat(variables('factoryId'), '/linkedServices/AzureDatabricks1')]",
         "[concat(variables('factoryId'), '/datasets/ds_postgres_table')]",
         "[concat(variables('factoryId'), '/datasets/ds_raw_table')]"
+      ]
+    },
+    {
+      "name": "[concat(parameters('factoryName'), '/AzureDatabricks1')]",
+      "type": "Microsoft.DataFactory/factories/linkedServices",
+      "apiVersion": "2018-06-01",
+      "properties": {
+        "annotations": [],
+        "type": "AzureDatabricks",
+        "typeProperties": {
+          "domain": "[parameters('AzureDatabricks1_properties_typeProperties_domain')]",
+          "authentication": "MSI",
+          "workspaceResourceId": "[parameters('AzureDatabricks1_properties_typeProperties_workspaceResourceId')]"
+        }
+      },
+      "dependsOn": []
+    },
+    {
+      "name": "[concat(parameters('factoryName'), '/trg_carrental_weekly')]",
+      "type": "Microsoft.DataFactory/factories/triggers",
+      "apiVersion": "2018-06-01",
+      "properties": {
+        "annotations": [],
+        "runtimeState": "Stopped",
+        "pipelines": [
+          {
+            "pipelineReference": {
+              "referenceName": "pl_all_tables_to_raw",
+              "type": "PipelineReference"
+            },
+            "parameters": {}
+          }
+        ],
+        "type": "ScheduleTrigger",
+        "typeProperties": {
+          "recurrence": {
+            "frequency": "Day",
+            "interval": 1,
+            "startTime": "2026-10-09T00:00:00",
+            "endTime": "2026-10-15T08:00:00",
+            "timeZone": "GMT Standard Time",
+            "schedule": {
+              "minutes": [
+                55
+              ],
+              "hours": [
+                16
+              ]
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[concat(variables('factoryId'), '/pipelines/pl_all_tables_to_raw')]"
       ]
     }
   ]

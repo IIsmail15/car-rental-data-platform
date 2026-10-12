@@ -1,0 +1,49 @@
+resources:
+  jobs:
+    job_carrental_curated_warehouse:
+      name: job_carrental_curated_warehouse
+      tasks:
+        - task_key: raw_to_curated
+          notebook_task:
+            notebook_path: /Workspace/Users/israa.ismail@studio.unibo.it/02_all_tables_raw_to_curated
+            source: WORKSPACE
+          min_retry_interval_millis: 900000
+          disable_auto_optimization: true
+          timeout_seconds: 600
+        - task_key: dbt_build
+          depends_on:
+            - task_key: raw_to_curated
+          dbt_task:
+            project_directory: car_rental_dbt
+            commands:
+              - dbt build
+            schema: analytics
+            warehouse_id: 3a42db489d006de3
+            catalog: dbw_carrental_dev_7405614156846449
+            source: GIT
+          min_retry_interval_millis: 900000
+          disable_auto_optimization: true
+          timeout_seconds: 600
+          environment_key: dbt_build_environment
+      git_source:
+        git_url: https://github.com/IIsmail15/car-rental-data-platform.git
+        git_provider: gitHub
+        git_branch: main
+      queue:
+        enabled: true
+      environments:
+        - environment_key: Default
+          spec:
+            environment_version: "6"
+        - environment_key: dbt-default
+          spec:
+            dependencies:
+              - dbt-databricks>=1.0.0,<2.0.0
+            environment_version: "6"
+        - environment_key: dbt_build_environment
+          spec:
+            dependencies:
+              - dbt-core==1.12.4
+              - dbt-databricks==1.12.6
+            environment_version: "6"
+      performance_target: PERFORMANCE_OPTIMIZED

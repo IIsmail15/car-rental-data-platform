@@ -22,6 +22,15 @@
     },
     "AzureDataLakeStorage1_properties_typeProperties_url": {
       "value": "https://stcarrentaldev.dfs.core.windows.net/"
+    },
+    "databricksJobId": {
+      "value": "82774375581532"
+    },
+    "AzureDatabricks1_properties_typeProperties_domain": {
+      "value": "https://adb-7405614156846449.9.azuredatabricks.net"
+    },
+    "AzureDatabricks1_properties_typeProperties_workspaceResourceId": {
+      "value": "/subscriptions/9cf46275-213b-4570-8f35-0d1652338c9a/resourceGroups/rg-carrental-dev/providers/Microsoft.Databricks/workspaces/dbw-carrental-dev"
     }
   }
 }
